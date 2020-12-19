@@ -16,12 +16,11 @@ use tungstenite::WebSocket as WebSocketTungstenite;
 pub struct WebSocket<T: Read + Write>(WebSocketTungstenite<T>);
 
 impl WebSocket<TcpStream> {
-    #[allow(dead_code)]
     pub fn from_tcp(
         address: &str,
         credentials: Option<Credentials>,
     ) -> Result<WebSocket<TcpStream>, WebSocketError> {
-        debug!("Initiating websocket connection to {}...", address);
+        debug!("Initiating websocket connection to {}", address);
         let address_with_protocol = String::from("ws://") + &address;
         let handshake_request = create_handshake_request(&address_with_protocol, credentials)?;
         let tcp_stream = open_tcp_stream(address)?;
@@ -32,20 +31,13 @@ impl WebSocket<TcpStream> {
 }
 
 impl WebSocket<TlsStream<TcpStream>> {
-    #[allow(dead_code)]
     pub fn from_tls_tcp(
         domain: &str,
         port: u16,
         credentials: Option<Credentials>,
     ) -> Result<WebSocket<TlsStream<TcpStream>>, WebSocketError> {
-        debug!("Initiating websocket connection to {}...", domain);
-        let ip = lookup_host(domain)?;
-        let address = ip
-            .first()
-            .ok_or_else(|| WebSocketError::new("No ip address for domain"))?
-            .to_string()
-            + ":"
-            + &port.to_string();
+        debug!("Initiating websocket connection to {}", domain);
+        let address = dns_lookup(domain)? + ":" + &port.to_string();
         let address_with_protocol = String::from("wss://") + &address;
         let handshake_request = create_handshake_request(&address_with_protocol, credentials)?;
         let tcp_stream = open_tcp_stream(&address)?;
@@ -56,18 +48,28 @@ impl WebSocket<TlsStream<TcpStream>> {
     }
 }
 
+fn dns_lookup(domain: &str) -> Result<String, WebSocketError> {
+    trace!("Looking up domain {}", domain);
+    let ip = lookup_host(domain)?;
+    let address = ip
+        .first()
+        .ok_or_else(|| WebSocketError::new("No ip address for domain"))?
+        .to_string();
+    Ok(address)
+}
+
 fn open_tcp_stream(address: &str) -> Result<TcpStream, WebSocketError> {
-    trace!("Opening tcp stream to {}...", address);
+    trace!("Opening tcp stream to {}", address);
     let parsed_address: SocketAddr = address.parse()?;
     let tcp_stream = TcpStream::connect(parsed_address)?;
     Ok(tcp_stream)
 }
 
-fn tls_encrypt_stream<T: Read + Write + Debug + 'static>(
+fn tls_encrypt_stream(
     domain: &str,
-    stream: T,
-) -> Result<TlsStream<T>, WebSocketError> {
-    trace!("Encrypting TLS stream to {}", domain);
+    stream: TcpStream,
+) -> Result<TlsStream<TcpStream>, WebSocketError> {
+    trace!("Encrypting TCP stream with TLS");
     let connector = TlsConnector::new()?;
     let tls_stream = connector.connect(domain, stream)?;
     Ok(tls_stream)
@@ -77,7 +79,7 @@ fn create_handshake_request(
     address_with_protocol: &str,
     credentials: Option<Credentials>,
 ) -> Result<Request<()>, WebSocketError> {
-    trace!("Building websocket request...");
+    trace!("Building websocket handshake request");
     let mut req_builder = Request::get(address_with_protocol.parse::<Uri>()?);
     if let Some(credentials) = credentials {
         let auth_string_base64 = String::from("Basic ")
@@ -156,7 +158,7 @@ impl<T: HandshakeRole + 'static> ErrMarker for tungstenite::HandshakeError<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST_ADDRESS: &str = "wss://echo.websocket.org";
+    const TEST_ADDRESS: &str = "https://this-address-does-surely-not-really-exist-does-it.com";
 
     #[test]
     fn test_create_handshake_request_without_credentials() {

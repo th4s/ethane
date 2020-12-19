@@ -1,1 +1,1 @@
-mod ws;
+pub mod ws;
