@@ -152,3 +152,29 @@ impl ErrMarker for http::Error {}
 impl ErrMarker for InvalidUri {}
 impl ErrMarker for InvalidHeaderValue {}
 impl<T: HandshakeRole + 'static> ErrMarker for tungstenite::HandshakeError<T> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const TEST_ADDRESS: &str = "wss://echo.websocket.org";
+
+    #[test]
+    fn test_create_handshake_request_without_credentials() {
+        let request = create_handshake_request(TEST_ADDRESS, None).unwrap();
+        assert_eq!(request.method(), http::method::Method::GET);
+        assert_eq!(request.uri(), &http::uri::Uri::from_static(TEST_ADDRESS));
+    }
+
+    #[test]
+    fn test_create_handshake_request_with_credentials() {
+        let credentials = Credentials {
+            username: String::from("abc"),
+            password: String::from("123"),
+        };
+        let request = create_handshake_request(TEST_ADDRESS, Some(credentials)).unwrap();
+        assert_eq!(
+            request.headers().get("Authorization").unwrap(),
+            "Basic YWJjOjEyMw=="
+        );
+    }
+}
