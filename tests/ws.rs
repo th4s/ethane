@@ -12,9 +12,14 @@ fn read_test_env() {
 fn test_basic_connection_tls() {
     read_test_env();
     let address = dotenv::var("ETH_WS_TEST_SERVER").expect("Var ETH_WS_TEST_SERVER is not set");
-    let username = dotenv::var("USERNAME").expect("Var USERNAME is not set");
-    let password = dotenv::var("PASSWORD").expect("Var PASSWORD is not set");
-    let credentials = Credentials { username, password };
-    let _ws_client = WebSocket::new(&address.parse().unwrap(), Some(credentials)).unwrap();
+    let credentials = if let Some(username) = dotenv::var("USERNAME").ok() {
+        Some(Credentials {
+            username,
+            password: dotenv::var("PASSWORD").expect("Var PASSWORD is not set"),
+        })
+    } else {
+        None
+    };
+    let _ws_client = WebSocket::new(&address.parse().unwrap(), credentials).unwrap();
     assert!(true);
 }

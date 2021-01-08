@@ -172,8 +172,8 @@ mod tests {
         spawn_websocket_server(ping_pong, 3001);
         let uri = Uri::from_static("ws://localhost:3001");
         let mut ws_client = WebSocket::new(&uri, None).unwrap();
-        ws_client.write_message("Ping").unwrap();
-        match ws_client.read_message() {
+        ws_client.write_text("Ping").unwrap();
+        match ws_client.read() {
             Ok(Message::Text(text)) => assert_eq!(text, "Ping Pong"),
             _ => assert!(false),
         };
