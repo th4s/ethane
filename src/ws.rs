@@ -19,15 +19,21 @@ impl WebSocket {
         Ok(WebSocket(ws.0))
     }
 
-    fn read(&mut self) -> Result<Message, WebSocketError> {
+    pub fn read(&mut self) -> Result<Message, WebSocketError> {
         let message = self.0.read_message()?;
         trace!("Reading from websocket: {}", &message);
         Ok(message)
     }
 
-    fn write_text(&mut self, message: &str) -> Result<(), WebSocketError> {
+    pub fn write_text(&mut self, message: &str) -> Result<(), WebSocketError> {
         trace!("Writing to websocket: {}", message);
         self.0.write_message(Message::Text(message.to_string()))?;
+        Ok(())
+    }
+
+    pub fn write_binary(&mut self, binary: Vec<u8>) -> Result<(), WebSocketError> {
+        trace!("Writing to websocket: {:?}", binary);
+        self.0.write_message(Message::Binary(binary))?;
         Ok(())
     }
 }
