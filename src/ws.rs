@@ -2,13 +2,15 @@ use http::header::InvalidHeaderValue;
 use http::{Request, Uri};
 use log::{debug, trace};
 use std::error::Error;
-use std::fmt::Debug;
 use tungstenite::client::AutoStream;
 use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungstenite};
 
+/// Convenience wrapper over a [websocket](tungstenite::WebSocket) connection of the [tungstenite crate](tungstenite)
 pub struct WebSocket(WebSocketTungstenite<AutoStream>);
 
 impl WebSocket {
+    /// Create a new websocket connection to the specified Uri.
+    /// When used with [credentials](Credentials), will try to attempt HTTP basic authentication for the handshake request.
     pub fn new(uri: &Uri, credentials: Option<Credentials>) -> Result<WebSocket, WebSocketError> {
         debug!("Initiating websocket connection to {}", &uri.to_string());
         let handshake_request = create_handshake_request(&uri, credentials)?;
@@ -17,13 +19,13 @@ impl WebSocket {
         Ok(WebSocket(ws.0))
     }
 
-    pub fn read(&mut self) -> Result<Message, WebSocketError> {
+    fn read(&mut self) -> Result<Message, WebSocketError> {
         let message = self.0.read_message()?;
         trace!("Reading from websocket: {}", &message);
         Ok(message)
     }
 
-    pub fn write_text(&mut self, message: &str) -> Result<(), WebSocketError> {
+    fn write_text(&mut self, message: &str) -> Result<(), WebSocketError> {
         trace!("Writing to websocket: {}", message);
         self.0.write_message(Message::Text(message.to_string()))?;
         Ok(())
@@ -49,12 +51,13 @@ fn create_handshake_request(
     Ok(request)
 }
 
+/// Used for HTTP basic authentication during the handshake request
 pub struct Credentials {
     pub username: String,
     pub password: String,
 }
 
-#[derive(Debug)]
+/// Collect all kinds of possible websocket errors
 pub struct WebSocketError {
     source: Option<Box<dyn Error>>,
     context: Option<String>,
@@ -69,16 +72,29 @@ impl WebSocketError {
     }
 }
 
+impl std::fmt::Debug for WebSocketError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut err_string = String::from("WebSocketError: ");
+        if let Some(ref source) = self.source {
+            err_string.push_str(&format!("{}: {:?}", "Source: ", source.as_ref()));
+        }
+        if let Some(ref context) = self.context {
+            err_string.push_str(&format!(" Context: {}", context));
+        }
+        write!(f, "{:?}", err_string)
+    }
+}
+
 impl std::fmt::Display for WebSocketError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "WebSocketError, Source: {},\nContext: {}",
-            self.source
-                .as_ref()
-                .map_or(String::from("Unknown"), |inner| inner.to_string()),
-            self.context.as_ref().map_or("None", |inner| inner.as_str())
-        )
+        let mut err_string = String::from("WebSocketError: ");
+        if let Some(ref source) = self.source {
+            err_string.push_str(&format!("{}: {}", "Source: ", source.as_ref()));
+        }
+        if let Some(ref context) = self.context {
+            err_string.push_str(&format!(" Context: {}", context));
+        }
+        write!(f, "{}", err_string)
     }
 }
 
@@ -100,6 +116,7 @@ impl<T: ErrMarker + Error + 'static> From<T> for WebSocketError {
     }
 }
 
+/// Used to wrap errors of underlying libraries into [WebSocketError](WebSocketError)
 pub trait ErrMarker {}
 
 impl ErrMarker for http::Error {}
