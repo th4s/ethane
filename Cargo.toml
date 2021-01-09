@@ -12,6 +12,7 @@ http = "0.2"
 base64 = "0.13"
 log = "0.4"
 ethereum-types = "0.10"
+hex = "0.4"
 
 [dev-dependencies]
 dotenv = "0.15"

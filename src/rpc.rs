@@ -1,5 +1,8 @@
+// TODO: eventually remove ethereum_types?
+// TODO: eventually use Serde Serialize, or stay with Display?
 use ethereum_types::Address;
 use ethereum_types::H256;
+use hex::ToHex;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 mod geth;
@@ -151,6 +154,7 @@ pub trait RemoteProcedures {
             .replace(Self::ID, &id.to_string())
             .replace(Self::PARAMS, &block_param.to_string())
     }
+
     fn eth_get_code(id: u32, address: Address, block_param: BlockParameter) -> String {
         let params: String = vec![address.to_string(), block_param.to_string()].join(", ");
 
@@ -160,18 +164,119 @@ pub trait RemoteProcedures {
             .replace(Self::PARAMS, &params)
     }
 
-    fn eth_sign() -> &'static str;
-    fn eth_signTransaction() -> &'static str;
-    fn eth_sendTransaction() -> &'static str;
-    fn eth_sendRawTransaction() -> &'static str;
-    fn eth_call() -> &'static str;
-    fn eth_estimateGas() -> &'static str;
-    fn eth_getBlockByHash() -> &'static str;
-    fn eth_getBlockByNumber() -> &'static str;
-    fn eth_getTransactionByHash() -> &'static str;
-    fn eth_getTransactionByBlockHashAndIndex() -> &'static str;
-    fn eth_getTransactionByBlockNumberAndIndex() -> &'static str;
-    fn eth_getTransactionReceipt() -> &'static str;
+    fn eth_sign(id: u32, address: Address, bytes: Bytes) -> String {
+        let params: String = vec![address.to_string(), bytes.to_string()].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_sign")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params)
+    }
+
+    fn eth_sign_transaction(id: u32, transaction: Transaction) -> String {
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_signTransaction")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &transaction.to_string())
+    }
+
+    fn eth_send_transaction(id: u32, transaction: Transaction) -> String {
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_sendTransaction")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &transaction.to_string())
+    }
+
+    fn eth_send_raw_transaction(id: u32, raw_transaction: Bytes) -> String {
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_sendRawTransaction")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &raw_transaction.to_string())
+    }
+
+    fn eth_call(id: u32, transaction: Transaction, block_param: BlockParameter) -> String {
+        let params: String = vec![transaction.to_string(), block_param.to_string()].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_call")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_estimate_gas(id: u32, transaction: Transaction, block_param: BlockParameter) -> String {
+        let params: String = vec![transaction.to_string(), block_param.to_string()].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_estimateGas")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_get_block_by_hash(id: u32, block_hash: H256, full_transactions: bool) -> String {
+        let params: String = vec![block_hash.to_string(), full_transactions.to_string()].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getBlockByHash")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_get_block_by_number(
+        id: u32,
+        block_param: BlockParameter,
+        full_transactions: bool,
+    ) -> String {
+        let params: String =
+            vec![block_param.to_string(), full_transactions.to_string()].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getBlockByNumber")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_get_transaction_by_hash(id: u32, transaction_hash: H256) -> String {
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getTransactionByHash")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &transaction_hash.to_string())
+    }
+
+    fn eth_get_transaction_by_block_hash_and_index(
+        id: u32,
+        block_hash: H256,
+        index_position: u32,
+    ) -> String {
+        let params: String =
+            vec![block_hash.to_string(), format!("{:#x}", index_position)].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getTransactionByBlockHashAndIndex")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_get_transaction_by_block_number_and_index(
+        id: u32,
+        block_param: BlockParameter,
+        index_position: u32,
+    ) -> String {
+        let params: String =
+            vec![block_param.to_string(), format!("{:#x}", index_position)].join(", ");
+
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getTransactionByBlockNumberAndIndex")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &params.to_string())
+    }
+
+    fn eth_get_transaction_receipt(id: u32, transaction_hash: H256) -> String {
+        String::from(Self::CMD)
+            .replace(Self::METHOD, "eth_getTransactionReceipt")
+            .replace(Self::ID, &id.to_string())
+            .replace(Self::PARAMS, &transaction_hash.to_string())
+    }
+
     fn eth_getUncleByBlockHashAndIndex() -> &'static str;
     fn eth_getUncleByBlockNumberAndIndex() -> &'static str;
     fn eth_getCompilers() -> &'static str;
@@ -209,12 +314,46 @@ impl Display for BlockParameter {
     }
 }
 
+pub struct Bytes(Vec<u8>);
+
+impl Display for Bytes {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let inner_hex: String = self.0.encode_hex();
+        let hex = String::from("0x") + &inner_hex;
+        write!(f, "{}", hex)
+    }
+}
+
+pub struct Transaction {
+    from: Address,
+    to: Address,
+    gas: u32,
+    gas_price: u32,
+    value: u32,
+    data: Bytes,
+    nonce: u32,
+}
+
+impl Display for Transaction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        unimplemented!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_display_for_block_parameter() {
+        assert_eq!(BlockParameter::CUSTOM(0).to_string(), "0x0");
         assert_eq!(BlockParameter::CUSTOM(17).to_string(), "0x11");
+        assert_eq!(BlockParameter::CUSTOM(256).to_string(), "0x100");
+    }
+
+    #[test]
+    fn test_display_for_bytes() {
+        let bytes = Bytes(vec![0, 1, 122, 4]);
+        assert_eq!("0x00017a04", bytes.to_string());
     }
 }
