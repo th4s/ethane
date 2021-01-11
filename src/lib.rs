@@ -2,5 +2,5 @@
 
 pub use ws::{Credentials, WebSocket, WebSocketError};
 
-mod rpc;
+pub mod rpc;
 pub mod ws;
