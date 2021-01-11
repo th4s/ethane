@@ -7,12 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tungstenite = {version = "0.11", features = ["native-tls"]}
+tungstenite = {version = "0.12", features = ["native-tls"]}
 http = "0.2"
 base64 = "0.13"
 log = "0.4"
 ethereum-types = "0.10"
 hex = "0.4"
+serde = "1.0"
+crossbeam-channel = "0.5"
 
 [dev-dependencies]
 dotenv = "0.15"
