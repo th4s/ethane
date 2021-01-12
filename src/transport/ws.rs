@@ -1,5 +1,6 @@
+use super::Request;
 use http::header::InvalidHeaderValue;
-use http::{Request, Uri};
+use http::{Request as HttpRequest, Uri};
 use log::{debug, trace};
 use std::error::Error;
 use tungstenite::client::AutoStream;
@@ -38,12 +39,23 @@ impl WebSocket {
     }
 }
 
+impl Request<WebSocketError> for WebSocket {
+    fn request(&mut self, cmd: String) -> Result<String, WebSocketError> {
+        //TODO include message id matching
+        let _write = self.write_text(&cmd)?;
+        match self.read()? {
+            Message::Text(reply) => Ok(reply),
+            _ => Err(WebSocketError::new("Did not receive a text message")),
+        }
+    }
+}
+
 fn create_handshake_request(
     uri: &Uri,
     credentials: Option<Credentials>,
-) -> Result<Request<()>, WebSocketError> {
+) -> Result<HttpRequest<()>, WebSocketError> {
     trace!("Building websocket handshake request");
-    let mut req_builder = Request::get(uri);
+    let mut req_builder = HttpRequest::get(uri);
     if let Some(credentials) = credentials {
         let auth_string_base64 = String::from("Basic ")
             + &base64::encode(credentials.username + ":" + &credentials.password);

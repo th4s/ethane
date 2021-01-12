@@ -1,22 +1,26 @@
 // TODO: eventually remove ethereum_types?
 // TODO: eventually use Serde Serialize, or stay with Display?
 use crate::eth_types::*;
+use crate::transport::Request;
 use ethereum_types::{Address, H256, H64};
+use std::error::Error;
 
 mod geth;
 
-pub trait RemoteProcedures {
+pub trait RemoteProcedures<T: Error>: Request<T> {
     const ID: &'static str = "_ID_";
     const PARAMS: &'static str = "_PARAMS_";
     const METHOD: &'static str = "_METHOD_";
     const CMD: &'static str =
         r#"{"jsonrpc":"2.0","method":"_METHOD_","params":[_PARAMS_],"id":_ID_}"#;
 
-    fn net_version(id: u32) -> String {
-        String::from(Self::CMD)
+    fn net_version(&mut self, id: u32) -> Result<String, T> {
+        // serialize, send, wait, deserialize
+        let cmd = String::from(Self::CMD)
             .replace(Self::METHOD, "net_version")
             .replace(Self::ID, &id.to_string())
-            .replace(Self::PARAMS, "")
+            .replace(Self::PARAMS, "");
+        self.request(cmd)
     }
 
     fn net_peer_count(id: u32) -> String {
