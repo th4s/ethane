@@ -1,28 +1,51 @@
-// TODO: eventually remove ethereum_types?
-// TODO: eventually use Serde Serialize, or stay with Display?
 use crate::eth_types::*;
-use crate::transport::Request;
 use ethereum_types::{Address, H256, H64};
+use serde::de::DeserializeOwned;
+use serde::export::PhantomData;
+use serde::Deserialize;
 use std::error::Error;
 
-mod geth;
+// TODO: eventually remove ethereum_types?
+// TODO: eventually use Serde Serialize, or stay with Display?
 
-pub trait RemoteProcedures<T: Error>: Request<T> {
-    const ID: &'static str = "_ID_";
-    const PARAMS: &'static str = "_PARAMS_";
-    const METHOD: &'static str = "_METHOD_";
-    const CMD: &'static str =
-        r#"{"jsonrpc":"2.0","method":"_METHOD_","params":[_PARAMS_],"id":_ID_}"#;
+const CMD: &str = r#"{"jsonrpc":"2.0","method":"_METHOD_","params":[_PARAMS_],"id":_ID_}"#;
+const ID: &str = "_ID_";
+const PARAMS: &str = "_PARAMS_";
+const METHOD: &str = "_METHOD_";
 
-    fn net_version(&mut self, id: u32) -> Result<String, T> {
-        // serialize, send, wait, deserialize
-        let cmd = String::from(Self::CMD)
-            .replace(Self::METHOD, "net_version")
-            .replace(Self::ID, &id.to_string())
-            .replace(Self::PARAMS, "");
-        self.request(cmd)
+pub trait Call {
+    fn call<T: DeserializeOwned, U: FnOnce() -> Rpc<T>>(
+        &mut self,
+        rpc: U,
+    ) -> Result<T, Box<dyn Error>>;
+}
+
+pub struct Rpc<T: DeserializeOwned> {
+    pub command: String,
+    pub result: PhantomData<T>,
+}
+
+impl Rpc<Version> {
+    pub fn net_version(id: u32) -> impl FnOnce() -> Rpc<Version> {
+        let command = String::from(CMD)
+            .replace(METHOD, "net_version")
+            .replace(ID, &id.to_string())
+            .replace(PARAMS, "");
+        move || Rpc {
+            command,
+            result: PhantomData,
+        }
     }
+}
 
+#[derive(Deserialize)]
+pub struct Version {
+    pub id: u32,
+    pub jsonrpc: String,
+    pub result: String,
+}
+
+pub trait RemoteProcedures {
     fn net_peer_count(id: u32) -> String {
         String::from(Self::CMD)
             .replace(Self::METHOD, "net_peerCount")

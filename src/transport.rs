@@ -2,12 +2,10 @@ use std::error::Error;
 
 pub mod ws;
 
-pub trait Request<T: Error> {
-    fn request(&mut self, cmd: String) -> Result<String, T>;
+pub trait Request {
+    fn request(&mut self, cmd: String) -> Result<String, Box<dyn Error>>;
 }
 
 // pub trait Subscribe {
-//     fn subscribe<'a, T>(&mut self) -> Receiver<T>
-//     where
-//         T: Deserialize<'a>;
+//     fn subscribe(&mut self, cmd: String) -> Result<Receiver<String>, Box<dyn Error>>;
 // }

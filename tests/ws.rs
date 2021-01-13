@@ -1,5 +1,4 @@
-use lucita::ws::Credentials;
-use lucita::ws::WebSocket;
+use lucita::{Call, Credentials, GethConnector, Rpc};
 
 fn read_test_env() {
     dotenv::from_filename("integration-test.env").expect(
@@ -8,8 +7,7 @@ fn read_test_env() {
     );
 }
 
-#[test]
-fn test_basic_connection_tls() {
+fn get_connection() -> (String, Option<Credentials>) {
     read_test_env();
     let address = dotenv::var("ETH_WS_TEST_SERVER").expect("Var ETH_WS_TEST_SERVER is not set");
     let credentials = if let Some(username) = dotenv::var("USERNAME").ok() {
@@ -20,6 +18,21 @@ fn test_basic_connection_tls() {
     } else {
         None
     };
-    let _ws_client = WebSocket::new(&address.parse().unwrap(), credentials).unwrap();
+    (address, credentials)
+}
+
+#[test]
+fn test_basic_connection_tls() {
+    let (address, credentials) = get_connection();
+    let mut geth = GethConnector::ws(&address, credentials).unwrap();
+    let _closed = geth.close().unwrap();
     assert!(true);
+}
+
+#[test]
+fn test_geth_net_version() {
+    let (address, credentials) = get_connection();
+    let mut geth = GethConnector::ws(&address, credentials).unwrap();
+    let net_version = geth.call(Rpc::net_version(1)).unwrap();
+    assert_eq!(net_version.result, "1");
 }
