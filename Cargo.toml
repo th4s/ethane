@@ -19,3 +19,4 @@ crossbeam-channel = "0.5"
 
 [dev-dependencies]
 dotenv = "0.15"
+lazy_static = "1.4"

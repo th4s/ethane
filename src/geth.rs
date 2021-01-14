@@ -1,9 +1,10 @@
-use crate::rpc::{Call, Rpc};
+use crate::rpc::{Call, Response, Rpc};
 use crate::transport::ws::{WebSocket, WebSocketError};
 use crate::transport::Request;
 use crate::Credentials;
 use serde::de::DeserializeOwned;
 use std::error::Error;
+use std::fmt::Debug;
 
 pub struct GethConnector<T: Request>(T);
 
@@ -18,13 +19,9 @@ impl GethConnector<WebSocket> {
 }
 
 impl<T: Request> Call for GethConnector<T> {
-    fn call<U: DeserializeOwned, V: FnOnce() -> Rpc<U>>(
-        &mut self,
-        rpc: V,
-    ) -> Result<U, Box<dyn Error>> {
-        let rpc = rpc();
+    fn call<U: DeserializeOwned + Debug>(&mut self, rpc: Rpc<U>) -> Result<U, Box<dyn Error>> {
         let response = self.0.request(rpc.command)?;
-        let result = serde_json::from_str::<U>(&response)?;
-        Ok(result)
+        let response = serde_json::from_str::<Response<U>>(&response)?;
+        Ok(response.result)
     }
 }

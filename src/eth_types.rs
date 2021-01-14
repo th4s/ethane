@@ -1,5 +1,7 @@
 use ethereum_types::{Address, H256};
 use hex::ToHex;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 pub enum BlockParameter {
@@ -21,14 +23,26 @@ impl Display for BlockParameter {
     }
 }
 
-pub struct Bytes(Vec<u8>);
+pub struct HexBytes(Vec<u8>);
 
-impl Display for Bytes {
+impl Display for HexBytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         let inner_hex: String = self.0.encode_hex();
         let hex = String::from("0x") + &inner_hex;
         write!(f, "{}", hex)
     }
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct HexNumber(#[serde(deserialize_with = "from_hex_number")] pub u32);
+
+fn from_hex_number<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    u32::from_str_radix(&s[2..], 16)
+        .map_err(|_| D::Error::custom("Unable to deserialize hex number"))
 }
 
 pub struct Transaction {
@@ -37,7 +51,7 @@ pub struct Transaction {
     pub gas: u32,
     pub gas_price: u32,
     pub value: u32,
-    pub data: Bytes,
+    pub data: HexBytes,
     pub nonce: u32,
 }
 
@@ -87,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_display_for_bytes() {
-        let bytes = Bytes(vec![0, 1, 122, 4]);
+        let bytes = HexBytes(vec![0, 1, 122, 4]);
         assert_eq!("0x00017a04", bytes.to_string());
     }
 }
