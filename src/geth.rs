@@ -21,7 +21,12 @@ impl GethConnector<WebSocket> {
 impl<T: Request> Call for GethConnector<T> {
     fn call<U: DeserializeOwned + Debug>(&mut self, rpc: Rpc<U>) -> Result<U, Box<dyn Error>> {
         let response = self.0.request(rpc.command)?;
-        let response = serde_json::from_str::<Response<U>>(&response)?;
-        Ok(response.result)
+        match serde_json::from_str::<Response<U>>(&response) {
+            Ok(Response {
+                error: Some(err), ..
+            }) => Err(Box::from(err)),
+            Ok(other) => Ok(other.result),
+            Err(err) => Err(Box::new(err)),
+        }
     }
 }

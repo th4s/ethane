@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
+use lucita::rpc::{self, Call, Rpc};
 use lucita::WebSocket;
-use lucita::{Call, Credentials, GethConnector, Rpc};
+use lucita::{Credentials, GethConnector};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -32,25 +33,50 @@ lazy_static! {
 }
 
 fn rpc_call_test_expected<T: DeserializeOwned + Debug + PartialEq>(rpc: Rpc<T>, expected: T) {
-    let geth = Arc::clone(&GETH);
-    let mut geth = geth.lock().unwrap();
-    let call_result: T = geth.call(rpc).unwrap();
-    assert_eq!(call_result, expected);
+    let call_result = {
+        let geth = Arc::clone(&GETH);
+        let mut geth = geth.lock().unwrap();
+        geth.call(rpc)
+    };
+    match call_result {
+        Ok(res) => assert_eq!(res, expected),
+        Err(err) => assert!(false, format!("{}", err)),
+    }
 }
 
 fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq>(rpc: Rpc<T>) {
-    let geth = Arc::clone(&GETH);
-    let mut geth = geth.lock().unwrap();
-    let _call_result: T = geth.call(rpc).unwrap();
-    assert!(true);
+    let call_result = {
+        let geth = Arc::clone(&GETH);
+        let mut geth = geth.lock().unwrap();
+        geth.call(rpc)
+    };
+    match call_result {
+        Ok(_) => assert!(true),
+        Err(err) => assert!(false, format!("{}", err)),
+    }
 }
 
 #[test]
 fn test_geth_net_version() {
-    rpc_call_test_some(Rpc::net_version(1));
+    rpc_call_test_some(rpc::net_version(1));
 }
 
 #[test]
 fn test_geth_net_peer_count() {
-    rpc_call_test_some(Rpc::net_peer_count(2));
+    rpc_call_test_some(rpc::net_peer_count(1));
+}
+
+#[test]
+fn test_geth_net_listening() {
+    rpc_call_test_some(rpc::net_listening(1));
+}
+
+#[test]
+fn test_geth_eth_protocol_version() {
+    rpc_call_test_some(rpc::eth_protocol_version(1));
+}
+
+#[test]
+fn test_geth_eth_syncing() {
+    rpc_call_test_some(rpc::eth_syncing(1));
 }

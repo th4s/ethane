@@ -2,12 +2,11 @@
 
 pub use eth_types::*;
 pub use geth::GethConnector;
-pub use rpc::{Call, Rpc};
 pub use transport::ws::{WebSocket, WebSocketError};
 
 mod eth_types;
 mod geth;
-mod rpc;
+pub mod rpc;
 mod transport;
 
 /// Used for HTTP basic authentication during the handshake request
