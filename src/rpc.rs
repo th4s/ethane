@@ -1,10 +1,11 @@
 use crate::eth_types::*;
+use crate::geth::GethError;
 use ethereum_types::{Address, H256, H64, U64};
 use serde::de::DeserializeOwned;
 use serde::export::PhantomData;
 use serde::Deserialize;
-use std::error::Error;
 use std::fmt::Debug;
+use thiserror::Error;
 
 // TODO: eventually remove ethereum_types?
 // TODO: eventually use Serde Serialize, or stay with Display?
@@ -15,26 +16,38 @@ const PARAMS: &str = "_PARAMS_";
 const METHOD: &str = "_METHOD_";
 
 pub trait Call {
-    fn call<T: DeserializeOwned + Debug>(&mut self, rpc: Rpc<T>) -> Result<T, Box<dyn Error>>;
+    fn call<T: DeserializeOwned + Debug>(&mut self, rpc: Rpc<T>) -> Result<T, CallError>;
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Error)]
+pub enum CallError {
+    #[error("{0}")]
+    GethError(#[from] GethError),
+}
+
+#[derive(Deserialize, Debug)]
 pub(crate) struct Response<T> {
     pub id: u32,
     pub jsonrpc: String,
-    pub result: T,
+    pub result: Option<T>,
     pub error: Option<String>,
 }
 
+#[derive(Deserialize, Debug)]
 pub struct Rpc<T: DeserializeOwned + Debug> {
     pub command: String,
     pub result: PhantomData<T>,
 }
 
-pub fn net_version(id: u32) -> Rpc<String> {
+impl<T: DeserializeOwned + Debug> Rpc<T> {
+    pub fn id(&mut self, id: u32) {
+        self.command = self.command.replace(ID, &id.to_string())
+    }
+}
+
+pub fn net_version() -> Rpc<String> {
     let command = String::from(CMD)
         .replace(METHOD, "net_version")
-        .replace(ID, &id.to_string())
         .replace(PARAMS, "");
     Rpc {
         command,
@@ -42,10 +55,9 @@ pub fn net_version(id: u32) -> Rpc<String> {
     }
 }
 
-pub fn eth_protocol_version(id: u32) -> Rpc<String> {
+pub fn eth_protocol_version() -> Rpc<String> {
     let command = String::from(CMD)
         .replace(METHOD, "eth_protocolVersion")
-        .replace(ID, &id.to_string())
         .replace(PARAMS, "");
     Rpc {
         command,
@@ -53,10 +65,9 @@ pub fn eth_protocol_version(id: u32) -> Rpc<String> {
     }
 }
 
-pub fn net_peer_count(id: u32) -> Rpc<U64> {
+pub fn net_peer_count() -> Rpc<U64> {
     let command = String::from(CMD)
         .replace(METHOD, "net_peerCount")
-        .replace(ID, &id.to_string())
         .replace(PARAMS, "");
     Rpc {
         command,
@@ -64,10 +75,9 @@ pub fn net_peer_count(id: u32) -> Rpc<U64> {
     }
 }
 
-pub fn net_listening(id: u32) -> Rpc<bool> {
+pub fn net_listening() -> Rpc<bool> {
     let command = String::from(CMD)
         .replace(METHOD, "net_listening")
-        .replace(ID, &id.to_string())
         .replace(PARAMS, "");
     Rpc {
         command,
@@ -75,10 +85,9 @@ pub fn net_listening(id: u32) -> Rpc<bool> {
     }
 }
 
-pub fn eth_syncing(id: u32) -> Rpc<bool> {
+pub fn eth_syncing() -> Rpc<bool> {
     let command = String::from(CMD)
         .replace(METHOD, "eth_syncing")
-        .replace(ID, &id.to_string())
         .replace(PARAMS, "");
     Rpc {
         command,
@@ -87,13 +96,6 @@ pub fn eth_syncing(id: u32) -> Rpc<bool> {
 }
 
 pub trait RemoteProcedures {
-    fn eth_syncing(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_syncing")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
     fn eth_coinbase(id: u32) -> String {
         String::from(CMD)
             .replace(METHOD, "eth_coinbase")

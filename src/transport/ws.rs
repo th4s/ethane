@@ -1,4 +1,4 @@
-use super::Request;
+use super::{Request, TransportError};
 use crate::Credentials;
 use http::header::InvalidHeaderValue;
 use http::{Request as HttpRequest, Uri};
@@ -59,15 +59,13 @@ impl WebSocket {
 }
 
 impl Request for WebSocket {
-    fn request(&mut self, cmd: String) -> Result<String, Box<dyn Error>> {
+    fn request(&mut self, cmd: String) -> Result<String, TransportError> {
         //TODO include message id matching
         let _write = self.write_text(&cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
-            Err(err) => Err(Box::new(err)),
-            _ => Err(Box::new(WebSocketError::new(
-                "Did not receive a text message",
-            ))),
+            Ok(_) => Err(WebSocketError::new("Did not receive a text message").into()),
+            Err(err) => Err(err.into()),
         }
     }
 }

@@ -58,25 +58,25 @@ fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq>(rpc: Rpc<T>) {
 
 #[test]
 fn test_geth_net_version() {
-    rpc_call_test_some(rpc::net_version(1));
+    rpc_call_test_some(rpc::net_version());
 }
 
 #[test]
 fn test_geth_net_peer_count() {
-    rpc_call_test_some(rpc::net_peer_count(1));
+    rpc_call_test_some(rpc::net_peer_count());
 }
 
 #[test]
 fn test_geth_net_listening() {
-    rpc_call_test_some(rpc::net_listening(1));
+    rpc_call_test_some(rpc::net_listening());
 }
 
 #[test]
 fn test_geth_eth_protocol_version() {
-    rpc_call_test_some(rpc::eth_protocol_version(1));
+    rpc_call_test_some(rpc::eth_protocol_version());
 }
 
 #[test]
 fn test_geth_eth_syncing() {
-    rpc_call_test_some(rpc::eth_syncing(1));
+    rpc_call_test_some(rpc::eth_syncing());
 }
