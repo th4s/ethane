@@ -26,10 +26,9 @@ impl GethConnector<WebSocket> {
 
 impl<T: Request> Call for GethConnector<T> {
     fn call<U: DeserializeOwned + Debug>(&mut self, mut rpc: Rpc<U>) -> Result<U, CallError> {
-        trace!("Calling rpc method: {:?}", &rpc);
-
         let command_id = self.get_command_id()?;
         rpc.id(command_id);
+        debug!("Calling rpc method: {:?}", &rpc);
         let response = self.send_request(rpc, command_id)?;
         self.1.push_back(command_id);
         deserialize(&response).map_err(|err| err.into())
@@ -38,6 +37,7 @@ impl<T: Request> Call for GethConnector<T> {
 
 impl<T: Request> GethConnector<T> {
     fn get_command_id(&mut self) -> Result<u32, GethError> {
+        trace!("Retrieving id from pool");
         match self.1.pop_front() {
             Some(inner) => Ok(inner),
             None => Err(GethError::NoTicketId),
@@ -49,6 +49,7 @@ impl<T: Request> GethConnector<T> {
         rpc: Rpc<U>,
         command_id: u32,
     ) -> Result<String, GethError> {
+        trace!("Sending request");
         let response = self.0.request(rpc.command)?;
 
         if !response.contains(&format!("\"id\":{}", command_id)) {
@@ -59,6 +60,7 @@ impl<T: Request> GethConnector<T> {
 }
 
 fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, GethError> {
+    trace!("Deserializing response {}", response);
     match serde_json::from_str::<Response<U>>(&response) {
         Ok(Response {
             error: Some(err), ..
