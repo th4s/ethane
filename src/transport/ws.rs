@@ -1,11 +1,11 @@
 use super::{Request, TransportError};
+use crate::transport::ws::WebSocketError::NoResponse;
 use crate::Credentials;
-use http::header::InvalidHeaderValue;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
 use std::borrow::Cow;
-use std::error::Error;
 use std::str::FromStr;
+use thiserror::Error;
 use tungstenite::client::AutoStream;
 use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::protocol::CloseFrame;
@@ -64,7 +64,7 @@ impl Request for WebSocket {
         let _write = self.write_text(&cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
-            Ok(_) => Err(WebSocketError::new("Did not receive a text message").into()),
+            Ok(_) => Err(NoResponse.into()),
             Err(err) => Err(err.into()),
         }
     }
@@ -89,7 +89,7 @@ fn create_handshake_request(
             + &base64::encode(credentials.username + ":" + &credentials.password);
         let headers = req_builder
             .headers_mut()
-            .ok_or_else(|| WebSocketError::new("Error while building headers for handshake"))?;
+            .ok_or_else(|| WebSocketError::HandshakeError)?;
         headers.insert("Authorization", auth_string_base64.parse()?);
     }
     let request = req_builder.body(())?;
@@ -98,71 +98,21 @@ fn create_handshake_request(
 }
 
 /// Collect all kinds of possible websocket errors
-pub struct WebSocketError {
-    source: Option<Box<dyn Error>>,
-    context: Option<String>,
+#[derive(Debug, Error)]
+pub enum WebSocketError {
+    #[error("WebSocketError: {0}")]
+    Tungstenite(#[from] tungstenite::Error),
+    #[error("WebSocketError: {0}")]
+    Http(#[from] http::Error),
+    #[error("WebSocketError: {0}")]
+    Url(#[from] http::uri::InvalidUri),
+    #[error("WebSocketError: HandshakeError")]
+    HandshakeError,
+    #[error("WebSocketError: Expected response, but did not receive any")]
+    NoResponse,
+    #[error("WebSocketError: {0}")]
+    InvalidHeader(#[from] http::header::InvalidHeaderValue),
 }
-
-impl WebSocketError {
-    fn new(context_info: &str) -> Self {
-        WebSocketError {
-            source: None,
-            context: Some(context_info.to_string()),
-        }
-    }
-}
-
-impl std::fmt::Debug for WebSocketError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut err_string = String::from("WebSocketError: ");
-        if let Some(ref source) = self.source {
-            err_string.push_str(&format!("{}: {:?}", "Source: ", source.as_ref()));
-        }
-        if let Some(ref context) = self.context {
-            err_string.push_str(&format!(" Context: {}", context));
-        }
-        write!(f, "{:?}", err_string)
-    }
-}
-
-impl std::fmt::Display for WebSocketError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut err_string = String::from("WebSocketError: ");
-        if let Some(ref source) = self.source {
-            err_string.push_str(&format!("{}: {}", "Source: ", source.as_ref()));
-        }
-        if let Some(ref context) = self.context {
-            err_string.push_str(&format!(" Context: {}", context));
-        }
-        write!(f, "{}", err_string)
-    }
-}
-
-impl Error for WebSocketError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match &self.source {
-            Some(inner) => Some(inner.as_ref()),
-            None => None,
-        }
-    }
-}
-
-impl<T: ErrMarker + Error + 'static> From<T> for WebSocketError {
-    fn from(err: T) -> Self {
-        WebSocketError {
-            source: Some(Box::new(err)),
-            context: None,
-        }
-    }
-}
-
-/// Used to wrap errors of underlying libraries into [WebSocketError](WebSocketError)
-pub trait ErrMarker {}
-
-impl ErrMarker for http::Error {}
-impl ErrMarker for InvalidHeaderValue {}
-impl ErrMarker for tungstenite::Error {}
-impl ErrMarker for http::uri::InvalidUri {}
 
 #[cfg(test)]
 mod tests {
