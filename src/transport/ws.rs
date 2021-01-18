@@ -62,7 +62,7 @@ impl Request for WebSocket {
         let _write = self.write_text(&cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
-            Ok(_) => Err(NonTextResponse.into()),
+            Ok(_) => Err(WebSocketError::NonTextResponse.into()),
             Err(err) => Err(err.into()),
         }
     }

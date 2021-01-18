@@ -1,5 +1,3 @@
 /target
 Cargo.lock
 .idea/
-integration-test.env
-

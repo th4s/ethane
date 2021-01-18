@@ -6,26 +6,9 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
-fn get_node_info() -> (String, Option<Credentials>) {
-    dotenv::from_filename("integration-test.env").expect(
-        "Integration testing not possible.\
-     File 'integration-test.env' is missing",
-    );
-    let address = dotenv::var("ETH_WS_TEST_SERVER").expect("Var ETH_WS_TEST_SERVER is not set");
-    let credentials = if let Some(username) = dotenv::var("USERNAME").ok() {
-        Some(Credentials {
-            username,
-            password: dotenv::var("PASSWORD").expect("Var PASSWORD is not set"),
-        })
-    } else {
-        None
-    };
-    (address, credentials)
-}
-
 lazy_static! {
     static ref GETH: Arc<Mutex<GethConnector<WebSocket>>> = {
-        let (address, credentials) = get_node_info();
+        let (address, credentials) = ("ws://127.0.0.1:8546", None);
         Arc::new(Mutex::new(
             GethConnector::ws(&address, credentials).unwrap(),
         ))
@@ -87,9 +70,7 @@ fn test_geth_eth_syncing() {
     rpc_call_test_some(rpc::eth_syncing());
 }
 
-// TODO: This behavior is implementation dependent and should be improved
 #[test]
-#[should_panic]
 fn test_geth_eth_coinbase() {
     rpc_call_test_some(rpc::eth_coinbase());
 }
