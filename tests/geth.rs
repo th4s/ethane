@@ -39,7 +39,10 @@ fn rpc_call_test_expected<T: DeserializeOwned + Debug + PartialEq>(rpc: Rpc<T>, 
         geth.call(rpc)
     };
     match call_result {
-        Ok(res) => assert_eq!(res, expected),
+        Ok(res) => {
+            println!("{:?}", res);
+            assert_eq!(res, expected);
+        }
         Err(err) => assert!(false, format!("{}", err)),
     }
 }
@@ -51,7 +54,10 @@ fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq>(rpc: Rpc<T>) {
         geth.call(rpc)
     };
     match call_result {
-        Ok(_) => assert!(true),
+        Ok(res) => {
+            println!("{:?}", res);
+            assert!(true);
+        }
         Err(err) => assert!(false, format!("{}", err)),
     }
 }
@@ -79,4 +85,36 @@ fn test_geth_eth_protocol_version() {
 #[test]
 fn test_geth_eth_syncing() {
     rpc_call_test_some(rpc::eth_syncing());
+}
+
+// TODO: This behavior is implementation dependent and should be improved
+#[test]
+#[should_panic]
+fn test_geth_eth_coinbase() {
+    rpc_call_test_some(rpc::eth_coinbase());
+}
+
+#[test]
+fn test_geth_eth_mining() {
+    rpc_call_test_some(rpc::eth_mining());
+}
+
+#[test]
+fn test_geth_eth_hashrate() {
+    rpc_call_test_some(rpc::eth_hashrate());
+}
+
+#[test]
+fn test_geth_eth_gas_price() {
+    rpc_call_test_some(rpc::eth_gas_price());
+}
+
+#[test]
+fn test_geth_eth_accounts() {
+    rpc_call_test_some(rpc::eth_accounts());
+}
+
+#[test]
+fn test_geth_eth_block_number() {
+    rpc_call_test_some(rpc::eth_block_number());
 }

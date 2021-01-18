@@ -30,7 +30,13 @@ pub(crate) struct Response<T> {
     pub id: u32,
     pub jsonrpc: String,
     pub result: Option<T>,
-    pub error: Option<String>,
+    pub error: Option<JsonError>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct JsonError {
+    code: i32,
+    message: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -95,49 +101,69 @@ pub fn eth_syncing() -> Rpc<bool> {
     }
 }
 
+pub fn eth_coinbase() -> Rpc<Address> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_coinbase")
+        .replace(PARAMS, "");
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
+pub fn eth_mining() -> Rpc<bool> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_mining")
+        .replace(PARAMS, "");
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
+pub fn eth_hashrate() -> Rpc<U64> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_hashrate")
+        .replace(PARAMS, "");
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
+pub fn eth_gas_price() -> Rpc<U64> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_gasPrice")
+        .replace(PARAMS, "");
+
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
+pub fn eth_accounts() -> Rpc<Vec<Address>> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_accounts")
+        .replace(PARAMS, "");
+
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
+pub fn eth_block_number() -> Rpc<U64> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_blockNumber")
+        .replace(PARAMS, "");
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
 pub trait RemoteProcedures {
-    fn eth_coinbase(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_coinbase")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
-    fn eth_mining(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_mining")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
-    fn eth_hashrate(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_hashrate")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
-    fn eth_gas_price(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_gasPrice")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
-    fn eth_accounts(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_accounts")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
-    fn eth_block_number(id: u32) -> String {
-        String::from(CMD)
-            .replace(METHOD, "eth_blockNumber")
-            .replace(ID, &id.to_string())
-            .replace(PARAMS, "")
-    }
-
     fn eth_get_balance(id: u32, address: Address, block_param: BlockParameter) -> String {
         let params: String = vec![address.to_string(), block_param.to_string()].join(", ");
 

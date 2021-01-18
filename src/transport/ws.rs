@@ -1,5 +1,4 @@
 use super::{Request, TransportError};
-use crate::transport::ws::WebSocketError::NoResponse;
 use crate::Credentials;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
@@ -60,11 +59,10 @@ impl WebSocket {
 
 impl Request for WebSocket {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
-        //TODO include message id matching
         let _write = self.write_text(&cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
-            Ok(_) => Err(NoResponse.into()),
+            Ok(_) => Err(NonTextResponse.into()),
             Err(err) => Err(err.into()),
         }
     }
@@ -89,7 +87,7 @@ fn create_handshake_request(
             + &base64::encode(credentials.username + ":" + &credentials.password);
         let headers = req_builder
             .headers_mut()
-            .ok_or_else(|| WebSocketError::HandshakeError)?;
+            .ok_or(WebSocketError::HandshakeError)?;
         headers.insert("Authorization", auth_string_base64.parse()?);
     }
     let request = req_builder.body(())?;
@@ -108,8 +106,8 @@ pub enum WebSocketError {
     Url(#[from] http::uri::InvalidUri),
     #[error("WebSocketError: HandshakeError")]
     HandshakeError,
-    #[error("WebSocketError: Expected response, but did not receive any")]
-    NoResponse,
+    #[error("WebSocketError: Expected text response, but received other")]
+    NonTextResponse,
     #[error("WebSocketError: {0}")]
     InvalidHeader(#[from] http::header::InvalidHeaderValue),
 }
