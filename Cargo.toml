@@ -1,5 +1,5 @@
 [package]
-name = "lucita"
+name = "ethane"
 version = "0.1.0"
 authors = ["thojest <thojest@gmail.com>"]
 edition = "2018"

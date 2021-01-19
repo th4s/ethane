@@ -1,4 +1,4 @@
-//! Lucita is a simple library for communicating with Ethereum nodes using the JSON-RPC over websocket.
+//! Ethane is an alternative web3 implementation with the aim of being simple, slim and interoperable.
 
 pub use eth_types::*;
 pub use geth::GethConnector;

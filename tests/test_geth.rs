@@ -1,10 +1,9 @@
+use ethane::rpc::{self, Call, CallError, Rpc};
+use ethane::{BlockParameter, Bytes, WebSocket};
+use ethane::{GethConnector, Transaction};
 use ethereum_types::Address;
 use lazy_static::lazy_static;
-use lucita::rpc::{self, Call, CallError, Rpc};
-use lucita::{BlockParameter, Bytes, WebSocket};
-use lucita::{GethConnector, Transaction};
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
 use serde_json::Value;
 use simple_logger::SimpleLogger;
 use std::fmt::Debug;

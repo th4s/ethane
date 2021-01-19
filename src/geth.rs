@@ -12,7 +12,7 @@ pub struct GethConnector<T: Request>(T, VecDeque<u32>);
 
 impl GethConnector<WebSocket> {
     pub fn ws(domain: &str, credentials: Option<Credentials>) -> Result<Self, GethError> {
-        debug!("Connecting to geth node");
+        debug!("Connecting to geth node...");
         Ok(GethConnector(
             WebSocket::new(domain, credentials).map_err(GethError::Initialization)?,
             (0..1000).collect(),
@@ -37,7 +37,7 @@ impl<T: Request> Call for GethConnector<T> {
 
 impl<T: Request> GethConnector<T> {
     fn get_command_id(&mut self) -> Result<u32, GethError> {
-        trace!("Retrieving id from pool");
+        trace!("Retrieving id from pool...");
         match self.1.pop_front() {
             Some(inner) => Ok(inner),
             None => Err(GethError::NoTicketId),
@@ -49,7 +49,7 @@ impl<T: Request> GethConnector<T> {
         rpc: Rpc<U>,
         command_id: u32,
     ) -> Result<String, GethError> {
-        trace!("Sending request");
+        trace!("Sending request...");
         let response = self.0.request(rpc.command)?;
 
         if !response.contains(&format!("\"id\":{}", command_id)) {
