@@ -1,6 +1,6 @@
 use crate::eth_types::*;
 use crate::geth::GethError;
-use ethereum_types::{Address, U256, U64};
+use ethereum_types::{Address, H256, U256, U64};
 use serde::de::DeserializeOwned;
 use serde::export::PhantomData;
 use serde::Deserialize;
@@ -121,7 +121,7 @@ pub fn eth_mining() -> Rpc<bool> {
     }
 }
 
-pub fn eth_hashrate() -> Rpc<U64> {
+pub fn eth_hashrate() -> Rpc<U256> {
     let command = String::from(CMD)
         .replace(METHOD, "eth_hashrate")
         .replace(PARAMS, "");
@@ -131,7 +131,7 @@ pub fn eth_hashrate() -> Rpc<U64> {
     }
 }
 
-pub fn eth_gas_price() -> Rpc<U64> {
+pub fn eth_gas_price() -> Rpc<U256> {
     let command = String::from(CMD)
         .replace(METHOD, "eth_gasPrice")
         .replace(PARAMS, "");
@@ -163,7 +163,8 @@ pub fn eth_block_number() -> Rpc<U64> {
     }
 }
 
-pub fn eth_get_balance(address: Address, block_param: BlockParameter) -> Rpc<U256> {
+pub fn eth_get_balance(address: Address, block_param: Option<BlockParameter>) -> Rpc<U256> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
     let params: String = vec![
         serde_json::to_string(&address)
             .expect("Serialization of block parameter failed. Should not happen"),
@@ -180,25 +181,41 @@ pub fn eth_get_balance(address: Address, block_param: BlockParameter) -> Rpc<U25
     }
 }
 
-// pub trait RemoteProcedures {
-//     fn eth_get_storage_at(
-//         id: u32,
-//         address: Address,
-//         storage_pos: u32,
-//         block_param: BlockParameter,
-//     ) -> String {
-//         let params: String = vec![
-//             address.to_string(),
-//             format!("{:#x}", storage_pos),
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getStorageAt")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
+pub fn eth_get_storage_at(
+    address: Address,
+    storage_pos: U256,
+    block_param: Option<BlockParameter>,
+) -> String {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let params: String = vec![
+        serde_json::to_string(&address)
+            .expect("Serialization of address failed. Should not happen"),
+        serde_json::to_string(&storage_pos)
+            .expect("Serialization of U256 failed. Should not happen"),
+        serde_json::to_string(&block_param)
+            .expect("Serialization of block parameter failed. Should not happen"),
+    ]
+    .join(", ");
+
+    String::from(CMD)
+        .replace(METHOD, "eth_getStorageAt")
+        .replace(PARAMS, &params)
+}
+
+pub fn eth_send_transaction(transaction: Transaction) -> Rpc<H256> {
+    let command = String::from(CMD)
+        .replace(METHOD, "eth_sendTransaction")
+        .replace(
+            PARAMS,
+            &serde_json::to_string(&transaction)
+                .expect("Serialization of transaction failed, Should not happen"),
+        );
+    Rpc {
+        command,
+        result: PhantomData,
+    }
+}
+
 //     fn eth_get_transaction_count(id: u32, address: Address, block_param: BlockParameter) -> String {
 //         let params: String = vec![
 //             address.to_string(),

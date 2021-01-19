@@ -1,14 +1,20 @@
+use ethereum_types::Address;
 use lazy_static::lazy_static;
 use lucita::rpc::{self, Call, CallError, Rpc};
-use lucita::GethConnector;
-use lucita::{BlockParameter, WebSocket};
+use lucita::{BlockParameter, Bytes, WebSocket};
+use lucita::{GethConnector, Transaction};
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
+use serde_json::Value;
 use simple_logger::SimpleLogger;
 use std::fmt::Debug;
+use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 const ETH_ENDPOINT: &str = "ws://127.0.0.1:8546";
+const TEST_CONTRACT_PATH: &str = "./tests/TestContract.sol";
+const TEST_CONTRACT_NAME: &str = "TestContract";
 
 struct EthProcess(u32);
 
@@ -54,8 +60,22 @@ fn spin_up_geth() -> EthProcess {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .expect("Unable to start local geth node in dev mode. Is geth installed?");
+        .expect("Unable to start local geth node for integration tests. Is geth installed?");
     EthProcess(cmd.id())
+}
+
+fn compile_contract(path: &Path, contract_name: &str) -> (String, String) {
+    let path_as_str = path.to_str().unwrap();
+    let output = Command::new("solc")
+        .args(&[path_as_str, "--optimize", "--combined-json", "abi,bin"])
+        .output()
+        .expect("Failed to compile contract. Is Solidity compiler solc installed?")
+        .stdout;
+    let output = std::str::from_utf8(output.as_slice()).expect("Failed to parse compiled contract");
+    let output: Value =
+        serde_json::from_str(output).expect("Failed to deserialize compiled contract");
+    let output = output["contracts"][String::from(path_as_str) + ":" + contract_name].clone();
+    (output["abi"].to_string(), output["bin"].to_string())
 }
 
 fn call<T: DeserializeOwned + Debug>(rpc: Rpc<T>) -> Result<T, CallError> {
@@ -144,5 +164,18 @@ fn test_geth_eth_block_number() {
 #[test]
 fn test_geth_eth_get_balance() {
     let coinbase = call(rpc::eth_coinbase()).unwrap();
-    rpc_call_test_some(rpc::eth_get_balance(coinbase, BlockParameter::Latest));
+    rpc_call_test_some(rpc::eth_get_balance(coinbase, Some(BlockParameter::Latest)));
+    rpc_call_test_some(rpc::eth_get_balance(Address::default(), None));
+}
+
+#[test]
+fn test_geth_eth_send_transaction_contract_creation() {
+    let (_abi, bin) = compile_contract(&Path::new(TEST_CONTRACT_PATH), TEST_CONTRACT_NAME);
+    let contract_bytes = serde_json::from_str::<Bytes>(&bin).unwrap();
+    let transaction = Transaction {
+        from: call(rpc::eth_coinbase()).unwrap(),
+        data: Some(contract_bytes),
+        ..Default::default()
+    };
+    rpc_call_test_some(rpc::eth_send_transaction(transaction));
 }
