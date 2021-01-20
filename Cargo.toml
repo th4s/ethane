@@ -18,6 +18,5 @@ thiserror = "1.0"
 hex = "0.4"
 
 [dev-dependencies]
-dotenv = "0.15"
 lazy_static = "1.4"
 simple_logger = "1.11"

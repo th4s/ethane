@@ -3,7 +3,7 @@ use thiserror::Error;
 pub mod ws;
 
 pub trait Request {
-    fn request(&mut self, cmd: String) -> Result<String, TransportError>;
+    fn request(&mut self, cmd: &str) -> Result<String, TransportError>;
 }
 
 // pub trait Subscribe {

@@ -1,19 +1,13 @@
 use crate::eth_types::*;
 use crate::geth::GethError;
 use ethereum_types::{Address, H256, U256, U64};
+use log::error;
 use serde::de::DeserializeOwned;
 use serde::export::PhantomData;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fmt::Debug;
 use thiserror::Error;
-
-// TODO: eventually remove ethereum_types?
-// TODO: eventually use Serde Serialize, or stay with Display?
-
-const CMD: &str = r#"{"jsonrpc":"2.0","method":"_METHOD_","params":[_PARAMS_],"id":_ID_}"#;
-const ID: &str = "_ID_";
-const PARAMS: &str = "_PARAMS_";
-const METHOD: &str = "_METHOD_";
 
 pub trait Call {
     fn call<T: DeserializeOwned + Debug>(&mut self, rpc: Rpc<T>) -> Result<T, CallError>;
@@ -29,7 +23,7 @@ pub enum CallError {
 pub(crate) struct Response<T> {
     pub id: u32,
     pub jsonrpc: String,
-    pub result: Option<T>,
+    pub result: T,
     pub error: Option<JsonError>,
 }
 
@@ -39,181 +33,120 @@ pub struct JsonError {
     message: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct Rpc<T: DeserializeOwned + Debug> {
-    pub command: String,
-    pub result: PhantomData<T>,
+    #[serde(rename = "jsonrpc")]
+    pub json_rpc: &'static str,
+    pub method: String,
+    pub params: Vec<Value>,
+    pub id: u32,
+    #[serde(skip_serializing)]
+    result: PhantomData<T>,
 }
 
 impl<T: DeserializeOwned + Debug> Rpc<T> {
-    pub fn id(&mut self, id: u32) {
-        self.command = self.command.replace(ID, &id.to_string())
+    const JSON_RPC: &'static str = "2.0";
+    const ID: u32 = 0;
+
+    pub fn new(method: &str) -> Rpc<T> {
+        Rpc {
+            json_rpc: Self::JSON_RPC,
+            method: String::from(method),
+            params: Vec::new(),
+            id: Self::ID,
+            result: PhantomData,
+        }
+    }
+
+    pub fn add_param<U: Serialize + Debug>(&mut self, parameter: U) {
+        match serde_json::to_value(&parameter) {
+            Ok(serialized_param) => self.params.push(serialized_param),
+            Err(err) => error!("Error during serialization: {}", err),
+        }
     }
 }
 
 pub fn net_version() -> Rpc<String> {
-    let command = String::from(CMD)
-        .replace(METHOD, "net_version")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("net_version")
 }
 
 pub fn eth_protocol_version() -> Rpc<String> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_protocolVersion")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_protocolVersion")
 }
 
 pub fn net_peer_count() -> Rpc<U64> {
-    let command = String::from(CMD)
-        .replace(METHOD, "net_peerCount")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("net_peerCount")
 }
 
 pub fn net_listening() -> Rpc<bool> {
-    let command = String::from(CMD)
-        .replace(METHOD, "net_listening")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("net_listening")
 }
 
 pub fn eth_syncing() -> Rpc<bool> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_syncing")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_syncing")
 }
 
 pub fn eth_coinbase() -> Rpc<Address> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_coinbase")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_coinbase")
 }
 
 pub fn eth_mining() -> Rpc<bool> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_mining")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_mining")
 }
 
 pub fn eth_hashrate() -> Rpc<U256> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_hashrate")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_hashrate")
 }
 
 pub fn eth_gas_price() -> Rpc<U256> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_gasPrice")
-        .replace(PARAMS, "");
-
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_gasPrice")
 }
 
 pub fn eth_accounts() -> Rpc<Vec<Address>> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_accounts")
-        .replace(PARAMS, "");
-
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_accounts")
 }
 
 pub fn eth_block_number() -> Rpc<U64> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_blockNumber")
-        .replace(PARAMS, "");
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    Rpc::new("eth_blockNumber")
 }
 
 pub fn eth_get_balance(address: Address, block_param: Option<BlockParameter>) -> Rpc<U256> {
     let block_param = block_param.unwrap_or(BlockParameter::Latest);
-    let params: String = vec![
-        serde_json::to_string(&address)
-            .expect("Serialization of block parameter failed. Should not happen"),
-        serde_json::to_string(&block_param)
-            .expect("Serialization of address failed. Should not happen"),
-    ]
-    .join(", ");
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_getBalance")
-        .replace(PARAMS, &params);
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    let mut rpc = Rpc::new("eth_getBalance");
+    rpc.add_param(address);
+    rpc.add_param(block_param);
+    rpc
+}
+
+pub fn eth_send_transaction(transaction: TransactionRequest) -> Rpc<H256> {
+    let mut rpc = Rpc::new("eth_sendTransaction");
+    rpc.add_param(transaction);
+    rpc
+}
+
+pub fn eth_get_transaction_by_hash(transaction_hash: H256) -> Rpc<Transaction> {
+    let mut rpc = Rpc::new("eth_getTransactionByHash");
+    rpc.add_param(transaction_hash);
+    rpc
+}
+
+pub fn eth_get_transaction_receipt(transaction_hash: H256) -> Rpc<Option<TransactionReceipt>> {
+    let mut rpc = Rpc::new("eth_getTransactionReceipt");
+    rpc.add_param(transaction_hash);
+    rpc
 }
 
 pub fn eth_get_storage_at(
     address: Address,
     storage_pos: U256,
     block_param: Option<BlockParameter>,
-) -> String {
+) -> Rpc<Bytes> {
     let block_param = block_param.unwrap_or(BlockParameter::Latest);
-    let params: String = vec![
-        serde_json::to_string(&address)
-            .expect("Serialization of address failed. Should not happen"),
-        serde_json::to_string(&storage_pos)
-            .expect("Serialization of U256 failed. Should not happen"),
-        serde_json::to_string(&block_param)
-            .expect("Serialization of block parameter failed. Should not happen"),
-    ]
-    .join(", ");
-
-    String::from(CMD)
-        .replace(METHOD, "eth_getStorageAt")
-        .replace(PARAMS, &params)
-}
-
-pub fn eth_send_transaction(transaction: Transaction) -> Rpc<H256> {
-    let command = String::from(CMD)
-        .replace(METHOD, "eth_sendTransaction")
-        .replace(
-            PARAMS,
-            &serde_json::to_string(&transaction)
-                .expect("Serialization of transaction failed, Should not happen"),
-        );
-    Rpc {
-        command,
-        result: PhantomData,
-    }
+    let mut rpc = Rpc::new("eth_getStorageAt");
+    rpc.add_param(address);
+    rpc.add_param(storage_pos);
+    rpc.add_param(block_param);
+    rpc
 }
 
 //     fn eth_get_transaction_count(id: u32, address: Address, block_param: BlockParameter) -> String {
@@ -358,13 +291,6 @@ pub fn eth_send_transaction(transaction: Transaction) -> Rpc<H256> {
 //             .replace(PARAMS, &params)
 //     }
 //
-//     fn eth_get_transaction_by_hash(id: u32, transaction_hash: H256) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getTransactionByHash")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &transaction_hash.to_string())
-//     }
-//
 //     fn eth_get_transaction_by_block_hash_and_index(
 //         id: u32,
 //         block_hash: H256,
@@ -396,12 +322,6 @@ pub fn eth_send_transaction(transaction: Transaction) -> Rpc<H256> {
 //             .replace(PARAMS, &params)
 //     }
 //
-//     fn eth_get_transaction_receipt(id: u32, transaction_hash: H256) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getTransactionReceipt")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &transaction_hash.to_string())
-//     }
 //
 //     fn eth_get_uncle_by_block_hash_and_index(id: u32, block_hash: H256) -> String {
 //         String::from(CMD)

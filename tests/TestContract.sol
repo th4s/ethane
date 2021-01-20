@@ -6,7 +6,7 @@ contract TestContract {
     mapping(address => uint) pos1;
 
     constructor() {
-        pos0 = 16;
+        pos0 = 11;
         pos1[msg.sender] = 3;
     }
 

@@ -58,8 +58,8 @@ impl WebSocket {
 }
 
 impl Request for WebSocket {
-    fn request(&mut self, cmd: String) -> Result<String, TransportError> {
-        let _write = self.write_text(&cmd)?;
+    fn request(&mut self, cmd: &str) -> Result<String, TransportError> {
+        let _write = self.write_text(cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
             Ok(_) => Err(WebSocketError::NonTextResponse.into()),
