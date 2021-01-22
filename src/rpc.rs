@@ -30,8 +30,16 @@ pub struct Response<T> {
     pub id: u32,
     #[serde(rename = "jsonrpc")]
     pub json_rpc: String,
-    pub result: T,
-    pub error: Option<JsonError>,
+    #[serde(flatten)]
+    pub result_or_error: RpcResult<T>,
+}
+
+#[derive(Deserialize, Debug)]
+pub enum RpcResult<T> {
+    #[serde(rename = "result")]
+    Result(T),
+    #[serde(rename = "error")]
+    Error(JsonError),
 }
 
 #[derive(Deserialize, Debug)]

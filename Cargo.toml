@@ -20,4 +20,4 @@ hex = "0.4"
 [dev-dependencies]
 simple_logger = "1.11"
 rand = "0.8.2"
-lazy_static = "1.4"
+port_scanner = "0.1"

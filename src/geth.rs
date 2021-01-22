@@ -1,4 +1,4 @@
-use crate::rpc::{Call, CallError, JsonError, Response, Rpc};
+use crate::rpc::{Call, CallError, JsonError, Response, Rpc, RpcResult};
 use crate::transport::ws::{WebSocket, WebSocketError};
 use crate::transport::{Request, TransportError};
 use crate::Credentials;
@@ -62,9 +62,12 @@ fn deserialize<U: DeserializeOwned + Debug>(response: String) -> Result<U, GethE
     trace!("Deserializing response {}", response);
     match serde_json::from_str::<Response<U>>(&response) {
         Ok(Response {
-            error: Some(err), ..
-        }) => Err(GethError::JsonRpc(err)),
-        Ok(inner) => Ok(inner.result),
+            result_or_error: inner,
+            ..
+        }) => match inner {
+            RpcResult::Result(result) => Ok(result),
+            RpcResult::Error(err) => Err(GethError::JsonRpc(err)),
+        },
         Err(err) => Err(GethError::from(err)),
     }
 }

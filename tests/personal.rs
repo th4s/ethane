@@ -1,5 +1,5 @@
 use ethane::rpc;
-use ethane::types::{PrivateKey, H160, H256};
+use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256};
 use std::str::FromStr;
 
 pub mod helper;
@@ -14,11 +14,8 @@ fn test_personal_list_accounts() {
 #[test]
 fn test_personal_import_raw_key() {
     let mut client = Client::ws();
-    let pk: PrivateKey = PrivateKey::NonPrefixed(
-        H256::from_str("fdc861959d1768d936bf17eec56260d4de3a7473e58c349e31beba539e5fc88d").unwrap(),
-    );
-    let expected_address: H160 =
-        H160::from_str("0xDc677f7C5060B0b441d30F361D0c8529Ac04E099").unwrap();
+    let pk: PrivateKey = PrivateKey::NonPrefixed(H256::from_str(FIX_SECRET).unwrap());
+    let expected_address: H160 = H160::from_str(FIX_ADDRESS).unwrap();
     rpc_call_test_expected(
         &mut client,
         rpc::personal_import_raw_key(pk, String::from(ACCOUNTS_PASSWORD)),
@@ -30,16 +27,82 @@ fn test_personal_import_raw_key() {
 fn test_personal_unlock_account() {
     let mut client = Client::ws();
     let secret = create_secret();
-    let pw = String::from(ACCOUNTS_PASSWORD);
-    let address = client
-        .call(rpc::personal_import_raw_key(
-            PrivateKey::NonPrefixed(secret),
-            pw.clone(),
-        ))
-        .unwrap();
+    let address = import_account(&mut client, secret);
+
     rpc_call_test_expected(
         &mut client,
-        rpc::personal_unlock_account(address, pw, None),
+        rpc::personal_unlock_account(address, String::from(ACCOUNTS_PASSWORD), None),
         true,
     );
+}
+
+#[test]
+fn test_personal_lock_account() {
+    let mut client = Client::ws();
+    let secret = create_secret();
+    let address = import_account(&mut client, secret);
+    unlock_account(&mut client, address);
+    rpc_call_test_expected(&mut client, rpc::personal_lock_account(address), true);
+}
+
+#[test]
+fn test_personal_new_account() {
+    let mut client = Client::ws();
+    rpc_call_test_some(
+        &mut client,
+        rpc::personal_new_account(String::from(ACCOUNTS_PASSWORD)),
+    );
+}
+
+#[test]
+fn test_personal_send_transaction() {
+    let mut client = Client::ws();
+    let (_secret, address) = create_account(&mut client);
+    let tx = TransactionRequest {
+        from: address,
+        to: Some(create_account(&mut client).1),
+        ..Default::default()
+    };
+    rpc_call_test_some(
+        &mut client,
+        rpc::personal_send_transaction(tx, String::from(ACCOUNTS_PASSWORD)),
+    );
+}
+
+#[test]
+fn test_personal_sign() {
+    let mut client = Client::ws();
+    let address = import_account(&mut client, H256::from_str(FIX_SECRET).unwrap());
+    let message = Bytes("checkmate".as_bytes().to_vec());
+    let expected_signature = Bytes(
+        hex::decode(
+            "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
+        c09c424607fbcf1cb4f6ec1c6a6c60a3527dcfe11412a3bff26218ca9f0bdef9d1b",
+        )
+        .unwrap(),
+    );
+
+    rpc_call_test_expected(
+        &mut client,
+        rpc::personal_sign(message, address, String::from(ACCOUNTS_PASSWORD)),
+        expected_signature,
+    );
+}
+
+#[test]
+fn test_personal_ec_recover() {
+    let mut client = Client::ws();
+    let message = Bytes("checkmate".as_bytes().to_vec());
+    let signature = Bytes(
+        hex::decode(
+            "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
+        c09c424607fbcf1cb4f6ec1c6a6c60a3527dcfe11412a3bff26218ca9f0bdef9d1b",
+        )
+        .unwrap(),
+    );
+    rpc_call_test_expected(
+        &mut client,
+        rpc::personal_ec_recover(message, signature),
+        H160::from_str(FIX_ADDRESS).unwrap(),
+    )
 }

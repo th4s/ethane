@@ -4,28 +4,23 @@ use ethane::transport::ws::WebSocket;
 use ethane::transport::Request;
 use ethane::types::{PrivateKey, TransactionRequest, H160, H256, U256};
 
-use lazy_static::lazy_static;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::str::FromStr;
-use std::sync::Mutex;
 
 pub const TEST_CONTRACT_PATH: &str = "./tests/fixtures/TestContract.sol";
 pub const TEST_CONTRACT_NAME: &str = "TestContract";
 pub const ACCOUNTS_PASSWORD: &str = "12345678";
+pub const FIX_SECRET: &str = "fdc861959d1768d936bf17eec56260d4de3a7473e58c349e31beba539e5fc88d";
+pub const FIX_ADDRESS: &str = "0xDc677f7C5060B0b441d30F361D0c8529Ac04E099";
 
-lazy_static! {
-    static ref PORT_POOL: Mutex<VecDeque<u32>> = Mutex::new((0..100).map(|x| x + 8547).collect());
-}
-
+#[allow(dead_code)]
 pub struct Client<T: Request> {
     client: GethConnector<T>,
-    #[allow(dead_code)]
     process: Process,
 }
 
@@ -48,21 +43,19 @@ impl Client<WebSocket> {
     }
 }
 
+#[allow(dead_code)]
 pub struct Process {
     cmd: Child,
-    http_port: u32,
-    ws_port: u32,
+    http_port: u16,
+    ws_port: u16,
 }
 
 impl Process {
     pub fn new() -> Self {
-        let (http_port, ws_port) = {
-            let mut pool = PORT_POOL.lock().unwrap();
-            (
-                pool.pop_front().expect("No port left in port pool."),
-                pool.pop_front().expect("No port left in port pool."),
-            )
-        };
+        let (http_port, ws_port) = (
+            port_scanner::request_open_port().expect("No port available"),
+            port_scanner::request_open_port().expect("No port available"),
+        );
         let cmd = Command::new("geth")
             .args(&[
                 "--dev",
@@ -101,9 +94,6 @@ impl Drop for Process {
             if !child.wait().expect(&e_message).success() {
                 println!("{}", &e_message);
             }
-            let mut pool = PORT_POOL.lock().unwrap();
-            pool.push_back(self.ws_port);
-            pool.push_back(self.http_port);
         } else {
             println!("{}", &e_message);
         }

@@ -1,6 +1,5 @@
 use super::Rpc;
-use crate::types::PrivateKey;
-use ethereum_types::H160;
+use crate::types::{Bytes, PrivateKey, TransactionRequest, H160, H256};
 
 pub fn personal_import_raw_key(private_key: PrivateKey, password: String) -> Rpc<H160> {
     let mut rpc = Rpc::new("personal_importRawKey");
@@ -24,5 +23,39 @@ pub fn personal_unlock_account(
     if let Some(duration) = duration {
         rpc.add_param(duration);
     }
+    rpc
+}
+
+pub fn personal_lock_account(address: H160) -> Rpc<bool> {
+    let mut rpc = Rpc::new("personal_lockAccount");
+    rpc.add_param(address);
+    rpc
+}
+
+pub fn personal_new_account(password: String) -> Rpc<H160> {
+    let mut rpc = Rpc::new("personal_newAccount");
+    rpc.add_param(password);
+    rpc
+}
+
+pub fn personal_send_transaction(transaction: TransactionRequest, password: String) -> Rpc<H256> {
+    let mut rpc = Rpc::new("personal_sendTransaction");
+    rpc.add_param(transaction);
+    rpc.add_param(password);
+    rpc
+}
+
+pub fn personal_sign(message: Bytes, address: H160, password: String) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("personal_sign");
+    rpc.add_param(message);
+    rpc.add_param(address);
+    rpc.add_param(password);
+    rpc
+}
+
+pub fn personal_ec_recover(message: Bytes, signature: Bytes) -> Rpc<H160> {
+    let mut rpc = Rpc::new("personal_ecRecover");
+    rpc.add_param(message);
+    rpc.add_param(signature);
     rpc
 }
