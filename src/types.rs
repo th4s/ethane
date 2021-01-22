@@ -1,4 +1,4 @@
-use ethereum_types::{Address, Bloom, H256, U256, U64};
+pub use ethereum_types::{Bloom, H160, H256, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -23,9 +23,9 @@ impl Serialize for BlockParameter {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct TransactionRequest {
-    pub from: Address,
+    pub from: H160,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub to: Option<Address>,
+    pub to: Option<H160>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas: Option<U256>,
     #[serde(rename = "gasPrice")]
@@ -45,14 +45,14 @@ pub struct Transaction {
     pub block_hash: Option<H256>,
     #[serde(rename = "blockNumber")]
     pub block_number: Option<U64>,
-    pub from: Address,
+    pub from: H160,
     pub gas: U256,
     #[serde(rename = "gasPrice")]
     pub gas_price: U256,
     pub hash: H256,
     pub input: Bytes,
     pub nonce: U256,
-    pub to: Option<Address>,
+    pub to: Option<H160>,
     #[serde(rename = "transactionIndex")]
     pub transaction_index: Option<U64>,
     pub value: U256,
@@ -71,14 +71,14 @@ pub struct TransactionReceipt {
     pub block_hash: H256,
     #[serde(rename = "blockNumber")]
     pub block_number: U64,
-    pub from: Address,
-    pub to: Option<Address>,
+    pub from: H160,
+    pub to: Option<H160>,
     #[serde(rename = "cumulativeGasUsed")]
     pub cumulative_gas_used: U256,
     #[serde(rename = "gasUsed")]
     pub gas_used: U256,
     #[serde(rename = "contractAddress")]
-    pub contract_address: Option<Address>,
+    pub contract_address: Option<H160>,
     pub logs: Vec<Log>,
     #[serde(rename = "logsBloom")]
     pub logs_bloom: Bloom,
@@ -87,7 +87,7 @@ pub struct TransactionReceipt {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Log {
-    address: Address,
+    address: H160,
     topics: Vec<H256>,
     data: Bytes,
     #[serde(rename = "blockHash")]
@@ -145,5 +145,20 @@ impl<'de> Visitor<'de> for BytesVisitor {
 
     fn visit_string<T: serde::de::Error>(self, value: String) -> Result<Self::Value, T> {
         self.visit_str(&value)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PrivateKey {
+    ZeroXPrefixed(H256),
+    NonPrefixed(H256),
+}
+
+impl Serialize for PrivateKey {
+    fn serialize<T: Serializer>(&self, serializer: T) -> Result<T::Ok, T::Error> {
+        match *self {
+            PrivateKey::ZeroXPrefixed(pk) => pk.serialize(serializer),
+            PrivateKey::NonPrefixed(pk) => serializer.serialize_str(&hex::encode(pk.0)),
+        }
     }
 }

@@ -77,8 +77,6 @@ pub enum GethError {
     NoTicketId,
     #[error("Geth Error: {0:?}")]
     JsonRpc(JsonError),
-    #[error("Geth Error: No result provided")]
-    NoResult,
     #[error("Geth Error: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("Geth Error: {0}")]
