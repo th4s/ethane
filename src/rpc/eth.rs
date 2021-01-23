@@ -1,5 +1,7 @@
 use super::Rpc;
-use crate::types::{BlockParameter, Bytes, Transaction, TransactionReceipt, TransactionRequest};
+use crate::types::{
+    Block, BlockParameter, Bytes, Transaction, TransactionReceipt, TransactionRequest,
+};
 use ethereum_types::{H160, H256, U256, U64};
 
 pub fn eth_protocol_version() -> Rpc<String> {
@@ -81,13 +83,23 @@ pub fn eth_get_transaction_count(address: H160, block_param: Option<BlockParamet
     rpc
 }
 
-//     fn eth_get_block_transaction_count_by_hash(id: u32, block_hash: H256) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getBlockTransactionCountByHash")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &block_hash.to_string())
-//     }
-//
+pub fn eth_get_block_by_number(
+    block_param: Option<BlockParameter>,
+    full_transactions: bool,
+) -> Rpc<Option<Block>> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getBlockByNumber");
+    rpc.add_param(block_param);
+    rpc.add_param(full_transactions);
+    rpc
+}
+
+pub fn eth_get_block_transaction_count_by_hash(block_hash: H256) -> Rpc<U64> {
+    let mut rpc = Rpc::new("eth_getBlockTransactionCountByHash");
+    rpc.add_param(block_hash);
+    rpc
+}
+
 //     fn eth_get_block_transaction_count_by_number(id: u32, block_param: BlockParameter) -> String {
 //         String::from(CMD)
 //             .replace(METHOD, "eth_getBlockTransactionCountByNumber")
@@ -189,23 +201,6 @@ pub fn eth_get_transaction_count(address: H160, block_param: Option<BlockParamet
 //
 //         String::from(CMD)
 //             .replace(METHOD, "eth_getBlockByHash")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_get_block_by_number(
-//         id: u32,
-//         block_param: BlockParameter,
-//         full_transactions: bool,
-//     ) -> String {
-//         let params: String = vec![
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//             full_transactions.to_string(),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getBlockByNumber")
 //             .replace(ID, &id.to_string())
 //             .replace(PARAMS, &params)
 //     }

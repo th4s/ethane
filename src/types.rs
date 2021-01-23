@@ -1,4 +1,4 @@
-pub use ethereum_types::{Bloom, H160, H256, U256, U64};
+pub use ethereum_types::{Bloom, H160, H256, H64, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
@@ -88,9 +88,9 @@ pub struct TransactionReceipt {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Log {
-    address: H160,
-    topics: Vec<H256>,
-    data: Bytes,
+    pub address: H160,
+    pub topics: Vec<H256>,
+    pub data: Bytes,
     #[serde(rename = "blockHash")]
     pub block_hash: Option<H256>,
     #[serde(rename = "blockNumber")]
@@ -177,4 +177,44 @@ impl Serialize for PrivateKey {
             PrivateKey::NonPrefixed(pk) => serializer.serialize_str(&hex::encode(pk.0)),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Block {
+    pub number: Option<U64>,
+    pub hash: Option<H256>,
+    #[serde(rename = "parentHash")]
+    pub parent_hash: H256,
+    pub nonce: Option<H64>,
+    #[serde(rename = "sha3Uncles")]
+    pub sha3_uncles: H256,
+    #[serde(rename = "logsBloom")]
+    pub logs_bloom: Option<Bloom>,
+    #[serde(rename = "transactionsRoot")]
+    pub transactions_root: H256,
+    #[serde(rename = "stateRoot")]
+    pub state_root: H256,
+    #[serde(rename = "receiptsRoot")]
+    pub receipts_root: H256,
+    pub miner: H160,
+    pub difficulty: U256,
+    #[serde(rename = "totalDifficulty")]
+    pub total_difficulty: U256,
+    #[serde(rename = "extraData")]
+    pub extra_data: Bytes,
+    pub size: U256,
+    #[serde(rename = "gasLimit")]
+    pub gas_limit: U256,
+    #[serde(rename = "gasUsed")]
+    pub gas_used: U256,
+    pub timestamp: U256,
+    pub transactions: Vec<TransactionOrHash>,
+    pub uncles: Vec<H256>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TransactionOrHash {
+    Transaction(Transaction),
+    Hash(H256),
 }

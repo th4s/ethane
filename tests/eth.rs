@@ -1,10 +1,10 @@
 use ethane::rpc;
-use ethane::types::{Bytes, TransactionRequest, U256};
+use ethane::types::{BlockParameter, Bytes, TransactionRequest, U256, U64};
 use std::path::Path;
+use std::str::FromStr;
 
 pub mod helper;
 use helper::*;
-use std::str::FromStr;
 
 #[test]
 fn test_eth_protocol_version() {
@@ -159,9 +159,7 @@ fn test_eth_get_transaction_count() {
     let transaction_hash_2 = client
         .call(rpc::eth_send_transaction(transaction.clone()))
         .unwrap();
-    let transaction_hash_3 = client
-        .call(rpc::eth_send_transaction(transaction.clone()))
-        .unwrap();
+    let transaction_hash_3 = client.call(rpc::eth_send_transaction(transaction)).unwrap();
     wait_for_transaction(&mut client, transaction_hash_1);
     wait_for_transaction(&mut client, transaction_hash_2);
     wait_for_transaction(&mut client, transaction_hash_3);
@@ -169,5 +167,73 @@ fn test_eth_get_transaction_count() {
         &mut client,
         rpc::eth_get_transaction_count(sender, None),
         U256::from(3),
+    );
+}
+
+#[test]
+fn test_eth_get_block_by_number_full_tx() {
+    let mut client = Client::ws();
+    let sender = create_account(&mut client).1;
+    let transaction = TransactionRequest {
+        from: sender,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(&mut client, rpc::eth_get_block_by_number(None, true));
+}
+
+#[test]
+fn test_eth_get_block_by_number_only_hashes() {
+    let mut client = Client::ws();
+    let sender = create_account(&mut client).1;
+    let transaction = TransactionRequest {
+        from: sender,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(&mut client, rpc::eth_get_block_by_number(None, false));
+}
+
+#[test]
+fn test_eth_get_block_by_number_no_block() {
+    let mut client = Client::ws();
+    let sender = create_account(&mut client).1;
+    let transaction = TransactionRequest {
+        from: sender,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(
+        &mut client,
+        rpc::eth_get_block_by_number(Some(BlockParameter::Custom(U64::from(120))), false),
+    );
+}
+
+#[test]
+fn test_eth_get_block_transaction_count_by_hash() {
+    let mut client = Client::ws();
+    let transaction = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    let block = client
+        .call(rpc::eth_get_block_by_number(None, false))
+        .unwrap();
+    rpc_call_test_some(
+        &mut client,
+        rpc::eth_get_block_transaction_count_by_hash(block.unwrap().hash.unwrap()),
     );
 }
