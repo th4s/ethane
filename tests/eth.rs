@@ -4,6 +4,7 @@ use std::path::Path;
 
 pub mod helper;
 use helper::*;
+use std::str::FromStr;
 
 #[test]
 fn test_eth_protocol_version() {
@@ -67,8 +68,11 @@ fn test_eth_get_balance() {
 #[test]
 fn test_eth_send_transaction_contract_creation() {
     let mut client = Client::ws();
-    let (_abi, bin) = compile_contract(&Path::new(TEST_CONTRACT_PATH), TEST_CONTRACT_NAME);
-    let contract_bytes = serde_json::from_str::<Bytes>(&bin).unwrap();
+    let bin = bin(compile_contract(
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    ));
+    let contract_bytes = Bytes::from_str(&bin).unwrap();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         data: Some(contract_bytes),
@@ -112,8 +116,11 @@ fn test_eth_get_transaction_receipt() {
 #[test]
 fn test_eth_get_storage_at() {
     let mut client = Client::ws();
-    let (_abi, bin) = compile_contract(&Path::new(TEST_CONTRACT_PATH), TEST_CONTRACT_NAME);
-    let contract_bytes = serde_json::from_str::<Bytes>(&bin).unwrap();
+    let bin = bin(compile_contract(
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    ));
+    let contract_bytes = Bytes::from_str(&bin).unwrap();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         data: Some(contract_bytes),

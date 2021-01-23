@@ -165,18 +165,20 @@ pub fn create_account<U: Request>(client: &mut Client<U>) -> (H256, H160) {
     (secret, address)
 }
 
-pub fn compile_contract(path: &Path, contract_name: &str) -> (String, String) {
+pub fn compile_contract(path: &Path, contract_name: &str) -> Value {
     let path_as_str = path.to_str().unwrap();
     let output = Command::new("solc")
         .args(&[path_as_str, "--optimize", "--combined-json", "abi,bin"])
         .output()
         .expect("Failed to compile contract. Is Solidity compiler solc installed?")
         .stdout;
-    let output = std::str::from_utf8(output.as_slice()).expect("Failed to parse compiled contract");
     let output: Value =
-        serde_json::from_str(output).expect("Failed to deserialize compiled contract");
-    let output = output["contracts"][String::from(path_as_str) + ":" + contract_name].clone();
-    (output["abi"].to_string(), output["bin"].to_string())
+        serde_json::from_slice(output.as_slice()).expect("Failed to deserialize compiled contract");
+    output["contracts"][String::from(path_as_str) + ":" + contract_name].clone()
+}
+
+pub fn bin(contract_input: Value) -> String {
+    contract_input["bin"].as_str().unwrap().to_string()
 }
 
 pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Request>(

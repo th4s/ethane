@@ -73,14 +73,12 @@ fn test_personal_send_transaction() {
 fn test_personal_sign() {
     let mut client = Client::ws();
     let address = import_account(&mut client, H256::from_str(FIX_SECRET).unwrap());
-    let message = Bytes("checkmate".as_bytes().to_vec());
-    let expected_signature = Bytes(
-        hex::decode(
-            "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
+    let message = Bytes::from_slice("checkmate".as_bytes());
+    let expected_signature = Bytes::from_str(
+        "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
         c09c424607fbcf1cb4f6ec1c6a6c60a3527dcfe11412a3bff26218ca9f0bdef9d1b",
-        )
-        .unwrap(),
-    );
+    )
+    .unwrap();
 
     rpc_call_test_expected(
         &mut client,
@@ -92,14 +90,12 @@ fn test_personal_sign() {
 #[test]
 fn test_personal_ec_recover() {
     let mut client = Client::ws();
-    let message = Bytes("checkmate".as_bytes().to_vec());
-    let signature = Bytes(
-        hex::decode(
-            "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
+    let message = Bytes::from_slice("checkmate".as_bytes());
+    let signature = Bytes::from_str(
+        "67e4a4cf3b8cfb7d9a568482e9b6deb6350bc7701ae0448b92752b463e7dc97\
         c09c424607fbcf1cb4f6ec1c6a6c60a3527dcfe11412a3bff26218ca9f0bdef9d1b",
-        )
-        .unwrap(),
-    );
+    )
+    .unwrap();
     rpc_call_test_expected(
         &mut client,
         rpc::personal_ec_recover(message, signature),

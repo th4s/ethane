@@ -1,6 +1,7 @@
 pub use ethereum_types::{Bloom, H160, H256, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BlockParameter {
@@ -108,9 +109,29 @@ pub struct Log {
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Bytes(pub Vec<u8>);
 
+impl Bytes {
+    pub fn from_slice(slice: &[u8]) -> Self {
+        Bytes(slice.to_vec())
+    }
+}
+
 impl Serialize for Bytes {
     fn serialize<T: Serializer>(&self, serializer: T) -> Result<T::Ok, T::Error> {
         serializer.serialize_str(&(String::from("0x") + &hex::encode(&self.0)))
+    }
+}
+
+impl FromStr for Bytes {
+    type Err = hex::FromHexError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let inner = if value.len() >= 2 && &value[0..2] == "0x" {
+            hex::decode(&value[2..])
+        } else {
+            hex::decode(value)
+        }?;
+
+        Ok(Bytes(inner))
     }
 }
 
@@ -133,14 +154,9 @@ impl<'de> Visitor<'de> for BytesVisitor {
     }
 
     fn visit_str<T: serde::de::Error>(self, value: &str) -> Result<Self::Value, T> {
-        let inner = if value.len() >= 2 && &value[0..2] == "0x" {
-            hex::decode(&value[2..])
-        } else {
-            hex::decode(value)
-        }
-        .map_err(|err| serde::de::Error::custom(format!("Invalid hex string: {}", err)))?;
-
-        Ok(Bytes(inner))
+        let result = Self::Value::from_str(value)
+            .map_err(|err| serde::de::Error::custom(format!("Invalid hex string: {}", err)))?;
+        Ok(result)
     }
 
     fn visit_string<T: serde::de::Error>(self, value: String) -> Result<Self::Value, T> {
