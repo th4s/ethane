@@ -100,69 +100,47 @@ pub fn eth_get_block_transaction_count_by_hash(block_hash: H256) -> Rpc<U64> {
     rpc
 }
 
-//     fn eth_get_block_transaction_count_by_number(id: u32, block_param: BlockParameter) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getBlockTransactionCountByNumber")
-//             .replace(ID, &id.to_string())
-//             .replace(
-//                 PARAMS,
-//                 &serde_json::to_string(&block_param).expect("Should not happen"),
-//             )
-//     }
-//
-//     fn eth_get_uncle_count_by_block_hash(id: u32, block_hash: H256) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getUncleCountByBlockHash")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &block_hash.to_string())
-//     }
-//
-//     fn eth_get_uncle_count_by_block_number(id: u32, block_param: BlockParameter) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getUncleCountByBlockNumber")
-//             .replace(ID, &id.to_string())
-//             .replace(
-//                 PARAMS,
-//                 &serde_json::to_string(&block_param).expect("Should not happen"),
-//             )
-//     }
-//
-//     fn eth_get_code(id: u32, address: Address, block_param: BlockParameter) -> String {
-//         let params: String = vec![
-//             address.to_string(),
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getCode")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_sign(id: u32, address: Address, bytes: HexBytes) -> String {
-//         let params: String = vec![address.to_string(), bytes.to_string()].join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_sign")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_sign_transaction(id: u32, transaction: Transaction) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_signTransaction")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &transaction.to_string())
-//     }
-//
-//     fn eth_send_transaction(id: u32, transaction: Transaction) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_sendTransaction")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &transaction.to_string())
-//     }
-//
+pub fn eth_get_block_transaction_count_by_number(block_param: Option<BlockParameter>) -> Rpc<U64> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getBlockTransactionCountByNumber");
+    rpc.add_param(block_param);
+    rpc
+}
+
+pub fn eth_get_uncle_count_by_block_hash(block_hash: H256) -> Rpc<U64> {
+    let mut rpc = Rpc::new("eth_getUncleCountByBlockHash");
+    rpc.add_param(block_hash);
+    rpc
+}
+
+pub fn eth_get_uncle_count_by_block_number(block_param: Option<BlockParameter>) -> Rpc<U64> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getUncleCountByBlockNumber");
+    rpc.add_param(block_param);
+    rpc
+}
+
+pub fn eth_get_code(address: H160, block_param: Option<BlockParameter>) -> Rpc<Bytes> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getCode");
+    rpc.add_param(address);
+    rpc.add_param(block_param);
+    rpc
+}
+
+pub fn eth_sign(address: H160, data: Bytes) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("eth_sign");
+    rpc.add_param(address);
+    rpc.add_param(data);
+    rpc
+}
+
+pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("eth_signTransaction");
+    rpc.add_param(transaction);
+    rpc
+}
+
 //     fn eth_send_raw_transaction(id: u32, raw_transaction: HexBytes) -> String {
 //         String::from(CMD)
 //             .replace(METHOD, "eth_sendRawTransaction")
