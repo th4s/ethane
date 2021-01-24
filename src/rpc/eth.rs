@@ -1,6 +1,7 @@
 use super::Rpc;
 use crate::types::{
-    Block, BlockParameter, Bytes, Transaction, TransactionReceipt, TransactionRequest,
+    Block, BlockParameter, Bytes, Call, GasCall, Transaction, TransactionReceipt,
+    TransactionRequest,
 };
 use ethereum_types::{H160, H256, U256, U64};
 
@@ -141,38 +142,28 @@ pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<Bytes> {
     rpc
 }
 
-//     fn eth_send_raw_transaction(id: u32, raw_transaction: HexBytes) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_sendRawTransaction")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &raw_transaction.to_string())
-//     }
-//
-//     fn eth_call(id: u32, transaction: Transaction, block_param: BlockParameter) -> String {
-//         let params: String = vec![
-//             transaction.to_string(),
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_call")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_estimate_gas(id: u32, transaction: Transaction, block_param: BlockParameter) -> String {
-//         let params: String = vec![
-//             transaction.to_string(),
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_estimateGas")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
+pub fn eth_send_raw_transaction(raw_transaction: Bytes) -> Rpc<H256> {
+    let mut rpc = Rpc::new("eth_sendRawTransaction");
+    rpc.add_param(raw_transaction);
+    rpc
+}
+
+pub fn eth_call(call: Call, block_param: Option<BlockParameter>) -> Rpc<Bytes> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_call");
+    rpc.add_param(call);
+    rpc.add_param(block_param);
+    rpc
+}
+
+pub fn eth_estimate_gas(gas_call: GasCall, block_param: Option<BlockParameter>) -> Rpc<U256> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_estimateGas");
+    rpc.add_param(gas_call);
+    rpc.add_param(block_param);
+    rpc
+}
+
 //
 //     fn eth_get_block_by_hash(id: u32, block_hash: H256, full_transactions: bool) -> String {
 //         let params: String = vec![block_hash.to_string(), full_transactions.to_string()].join(", ");

@@ -2,7 +2,7 @@ use ethane::geth::GethConnector;
 use ethane::rpc::{self, Call, CallError, Rpc};
 use ethane::transport::ws::WebSocket;
 use ethane::transport::Request;
-use ethane::types::{PrivateKey, TransactionRequest, H160, H256, U256};
+use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256};
 
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -17,6 +17,8 @@ pub const TEST_CONTRACT_NAME: &str = "TestContract";
 pub const ACCOUNTS_PASSWORD: &str = "12345678";
 pub const FIX_SECRET: &str = "fdc861959d1768d936bf17eec56260d4de3a7473e58c349e31beba539e5fc88d";
 pub const FIX_ADDRESS: &str = "0xDc677f7C5060B0b441d30F361D0c8529Ac04E099";
+pub const KECCAK_HASH_OF_EMPTY_STRING: &str =
+    "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
 #[allow(dead_code)]
 pub struct Client<T: Request> {
@@ -177,8 +179,38 @@ pub fn compile_contract(path: &Path, contract_name: &str) -> Value {
     output["contracts"][String::from(path_as_str) + ":" + contract_name].clone()
 }
 
+pub fn deploy_contract<U: Request>(
+    client: &mut Client<U>,
+    address: H160,
+    path: &Path,
+    contract_name: &str,
+) -> (H160, Value) {
+    let raw_contract = compile_contract(path, contract_name);
+    let bin = bin(raw_contract.clone());
+    let abi = abi(raw_contract);
+    let contract_bytes = Bytes::from_str(&bin).unwrap();
+    let address = address;
+    let transaction = TransactionRequest {
+        from: address,
+        data: Some(contract_bytes.clone()),
+        ..Default::default()
+    };
+    let transaction_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(client, transaction_hash);
+
+    let receipt = client
+        .call(rpc::eth_get_transaction_receipt(transaction_hash))
+        .unwrap();
+    let contract_address = receipt.unwrap().contract_address.unwrap();
+    (contract_address, abi)
+}
+
 pub fn bin(contract_input: Value) -> String {
     contract_input["bin"].as_str().unwrap().to_string()
+}
+
+pub fn abi(contract_input: Value) -> Value {
+    contract_input["abi"].clone()
 }
 
 pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Request>(

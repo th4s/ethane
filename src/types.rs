@@ -218,3 +218,36 @@ pub enum TransactionOrHash {
     Transaction(Transaction),
     Hash(H256),
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct Call {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<H160>,
+    pub to: H160,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas: Option<U256>,
+    #[serde(rename = "gasPrice")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_price: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Bytes>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct GasCall {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<H160>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to: Option<H160>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas: Option<U256>,
+    #[serde(rename = "gasPrice")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_price: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Bytes>,
+}

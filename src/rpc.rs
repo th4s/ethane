@@ -10,10 +10,12 @@ use thiserror::Error;
 pub use eth::*;
 pub use net::*;
 pub use personal::*;
+pub use web3::*;
 
 mod eth;
 mod net;
 mod personal;
+mod web3;
 
 pub trait Call {
     fn call<T: DeserializeOwned + Debug>(&mut self, rpc: Rpc<T>) -> Result<T, CallError>;

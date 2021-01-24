@@ -1,7 +1,8 @@
 use ethane::rpc;
-use ethane::types::{BlockParameter, Bytes, TransactionRequest, H256, U256, U64};
+use ethane::types::{BlockParameter, Bytes, Call, GasCall, TransactionRequest, H256, U256, U64};
 use std::path::Path;
 use std::str::FromStr;
+use tiny_keccak::{Hasher, Keccak};
 
 pub mod helper;
 use helper::*;
@@ -128,22 +129,13 @@ fn test_eth_get_transaction_receipt() {
 #[test]
 fn test_eth_get_storage_at() {
     let mut client = Client::ws();
-    let bin = bin(compile_contract(
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
         &Path::new(TEST_CONTRACT_PATH),
         TEST_CONTRACT_NAME,
-    ));
-    let contract_bytes = Bytes::from_str(&bin).unwrap();
-    let transaction = TransactionRequest {
-        from: create_account(&mut client).1,
-        data: Some(contract_bytes),
-        ..Default::default()
-    };
-    let transaction_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
-    wait_for_transaction(&mut client, transaction_hash);
-    let receipt = client
-        .call(rpc::eth_get_transaction_receipt(transaction_hash))
-        .unwrap();
-    let contract_address = receipt.unwrap().contract_address.unwrap();
+    );
     rpc_call_test_expected(
         &mut client,
         rpc::eth_get_storage_at(contract_address, U256::zero(), None),
@@ -315,22 +307,13 @@ fn test_eth_get_code_missing() {
 #[test]
 fn test_eth_get_code_contract() {
     let mut client = Client::ws();
-    let bin = bin(compile_contract(
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
         &Path::new(TEST_CONTRACT_PATH),
         TEST_CONTRACT_NAME,
-    ));
-    let contract_bytes = Bytes::from_str(&bin).unwrap();
-    let transaction = TransactionRequest {
-        from: create_account(&mut client).1,
-        data: Some(contract_bytes.clone()),
-        ..Default::default()
-    };
-    let transaction_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
-    wait_for_transaction(&mut client, transaction_hash);
-    let receipt = client
-        .call(rpc::eth_get_transaction_receipt(transaction_hash))
-        .unwrap();
-    let contract_address = receipt.unwrap().contract_address.unwrap();
+    );
     rpc_call_test_some(&mut client, rpc::eth_get_code(contract_address, None));
 }
 
@@ -372,4 +355,69 @@ fn test_eth_sign_transaction() {
         ..Default::default()
     };
     rpc_call_test_some(&mut client, rpc::eth_sign_transaction(transaction));
+}
+
+// TODO: Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
+// TODO: it should return only the transaction hash
+#[test]
+#[ignore]
+fn test_eth_send_raw_transaction() {
+    let mut client = Client::ws();
+    let transaction = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(create_account(&mut client).1),
+        gas: Some(U256::exp10(12)),
+        gas_price: Some(U256::exp10(3)),
+        value: Some(U256::zero()),
+        nonce: Some(U256::zero()),
+        ..Default::default()
+    };
+    let raw_tx = client.call(rpc::eth_sign_transaction(transaction)).unwrap();
+    rpc_call_test_some(&mut client, rpc::eth_send_raw_transaction(raw_tx));
+}
+
+#[test]
+fn test_eth_call() {
+    let mut client = Client::ws();
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    );
+
+    let mut hasher = Keccak::v256();
+    hasher.update(b"solution()");
+    let mut out = [0u8; 32];
+    hasher.finalize(&mut out);
+    let call = Call {
+        to: contract_address,
+        data: Some(Bytes::from_slice(&out[..4])),
+        ..Default::default()
+    };
+    let mut expected = [0u8; 32];
+    expected[31] = 42;
+
+    rpc_call_test_expected(
+        &mut client,
+        rpc::eth_call(call, None),
+        Bytes::from_slice(&expected),
+    );
+}
+
+#[test]
+fn test_eth_estimate_gas() {
+    let mut client = Client::ws();
+    let gas_call = GasCall {
+        from: Some(create_account(&mut client).1),
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    rpc_call_test_expected(
+        &mut client,
+        rpc::eth_estimate_gas(gas_call, None),
+        U256::from(21000),
+    );
 }
