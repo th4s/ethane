@@ -6,7 +6,6 @@ use tiny_keccak::{Hasher, Keccak};
 
 pub mod helper;
 use helper::*;
-use rpc::eth_get_uncle_by_block_hash_and_index;
 
 #[test]
 fn test_eth_protocol_version() {
@@ -440,7 +439,7 @@ fn test_eth_get_block_by_hash() {
     rpc_call_test_some(
         &mut client,
         rpc::eth_get_block_by_hash(block.unwrap().hash.unwrap(), true),
-    )
+    );
 }
 
 #[test]
@@ -460,7 +459,7 @@ fn test_eth_get_transaction_by_block_hash_and_index() {
     rpc_call_test_some(
         &mut client,
         rpc::eth_get_transaction_by_block_hash_and_index(block.unwrap().hash.unwrap(), U64::zero()),
-    )
+    );
 }
 
 #[test]
@@ -477,7 +476,7 @@ fn test_eth_get_transaction_by_block_number_and_index() {
     rpc_call_test_some(
         &mut client,
         rpc::eth_get_transaction_by_block_number_and_index(None, U64::zero()),
-    )
+    );
 }
 
 #[test]
@@ -498,5 +497,31 @@ fn test_eth_get_uncle_by_block_hash_and_index() {
         &mut client,
         rpc::eth_get_uncle_by_block_hash_and_index(block.unwrap().hash.unwrap(), U64::zero()),
         None,
-    )
+    );
+}
+
+#[test]
+fn test_eth_get_uncle_by_block_number_and_index() {
+    let mut client = Client::ws();
+    let transaction = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_expected(
+        &mut client,
+        rpc::eth_get_uncle_by_block_number_and_index(None, U64::zero()),
+        None,
+    );
+}
+
+// TODO: This test fails with geth because the method is not available, although it should according to JSON RPC spec
+#[test]
+#[ignore]
+fn test_eth_get_compilers() {
+    let mut client = Client::ws();
+    rpc_call_test_some(&mut client, rpc::eth_get_compilers());
 }

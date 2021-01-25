@@ -201,30 +201,22 @@ pub fn eth_get_uncle_by_block_hash_and_index(
     rpc.add_param(index_position);
     rpc
 }
-//
-//     fn eth_get_uncle_by_block_number_and_index(
-//         id: u32,
-//         block_param: BlockParameter,
-//         index_position: u32,
-//     ) -> String {
-//         let params: String = vec![
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//             format!("{:#x}", index_position),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getUncleByBlockNumberAndIndex")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_get_compilers(id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getCompilers")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, "")
-//     }
+
+pub fn eth_get_uncle_by_block_number_and_index(
+    block_param: Option<BlockParameter>,
+    index_position: U64,
+) -> Rpc<Option<Block>> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getUncleByBlockNumberAndIndex");
+    rpc.add_param(block_param);
+    rpc.add_param(index_position);
+    rpc
+}
+
+pub fn eth_get_compilers() -> Rpc<Vec<String>> {
+    Rpc::new("eth_getCompilers")
+}
+
 //
 //     fn eth_compile_lll(id: u32, source_code: String) -> String {
 //         String::from(CMD)
