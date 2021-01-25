@@ -164,54 +164,43 @@ pub fn eth_estimate_gas(gas_call: GasCall, block_param: Option<BlockParameter>) 
     rpc
 }
 
+pub fn eth_get_block_by_hash(block_hash: H256, full_transactions: bool) -> Rpc<Option<Block>> {
+    let mut rpc = Rpc::new("eth_getBlockByHash");
+    rpc.add_param(block_hash);
+    rpc.add_param(full_transactions);
+    rpc
+}
+
+pub fn eth_get_transaction_by_block_hash_and_index(
+    block_hash: H256,
+    index_position: U64,
+) -> Rpc<Transaction> {
+    let mut rpc = Rpc::new("eth_getTransactionByBlockHashAndIndex");
+    rpc.add_param(block_hash);
+    rpc.add_param(index_position);
+    rpc
+}
 //
-//     fn eth_get_block_by_hash(id: u32, block_hash: H256, full_transactions: bool) -> String {
-//         let params: String = vec![block_hash.to_string(), full_transactions.to_string()].join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getBlockByHash")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_get_transaction_by_block_hash_and_index(
-//         id: u32,
-//         block_hash: H256,
-//         index_position: u32,
-//     ) -> String {
-//         let params: String =
-//             vec![block_hash.to_string(), format!("{:#x}", index_position)].join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getTransactionByBlockHashAndIndex")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_get_transaction_by_block_number_and_index(
-//         id: u32,
-//         block_param: BlockParameter,
-//         index_position: u32,
-//     ) -> String {
-//         let params: String = vec![
-//             serde_json::to_string(&block_param).expect("Should not happen"),
-//             format!("{:#x}", index_position),
-//         ]
-//         .join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getTransactionByBlockNumberAndIndex")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//
-//     fn eth_get_uncle_by_block_hash_and_index(id: u32, block_hash: H256) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getUncleByBlockHashAndIndex")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &block_hash.to_string())
-//     }
+pub fn eth_get_transaction_by_block_number_and_index(
+    block_param: Option<BlockParameter>,
+    index_position: U64,
+) -> Rpc<Transaction> {
+    let block_param = block_param.unwrap_or(BlockParameter::Latest);
+    let mut rpc = Rpc::new("eth_getTransactionByBlockNumberAndIndex");
+    rpc.add_param(block_param);
+    rpc.add_param(index_position);
+    rpc
+}
+
+pub fn eth_get_uncle_by_block_hash_and_index(
+    block_hash: H256,
+    index_position: U64,
+) -> Rpc<Option<Block>> {
+    let mut rpc = Rpc::new("eth_getUncleByBlockHashAndIndex");
+    rpc.add_param(block_hash);
+    rpc.add_param(index_position);
+    rpc
+}
 //
 //     fn eth_get_uncle_by_block_number_and_index(
 //         id: u32,

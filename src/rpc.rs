@@ -1,10 +1,10 @@
 use crate::geth::GethError;
 use log::error;
 use serde::de::DeserializeOwned;
-use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use thiserror::Error;
 
 pub use eth::*;
