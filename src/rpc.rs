@@ -1,7 +1,7 @@
 use crate::geth::GethError;
 use log::error;
 use serde::de::DeserializeOwned;
-use serde::export::PhantomData;
+use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
