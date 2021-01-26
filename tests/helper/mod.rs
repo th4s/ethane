@@ -11,6 +11,7 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::str::FromStr;
+use tiny_keccak::{Hasher, Keccak};
 
 pub const TEST_CONTRACT_PATH: &str = "./tests/fixtures/TestContract.sol";
 pub const TEST_CONTRACT_NAME: &str = "TestContract";
@@ -211,6 +212,14 @@ pub fn bin(contract_input: Value) -> String {
 
 pub fn abi(contract_input: Value) -> Value {
     contract_input["abi"].clone()
+}
+
+pub fn keccak(input: &[u8]) -> [u8; 32] {
+    let mut hasher = Keccak::v256();
+    hasher.update(input);
+    let mut out = [0u8; 32];
+    hasher.finalize(&mut out);
+    out
 }
 
 pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Request>(

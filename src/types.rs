@@ -1,9 +1,10 @@
-pub use ethereum_types::{Bloom, H160, H256, H64, U256, U64};
+pub use ethereum_types::{Bloom, H160, H256, H64, U128, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt::Debug;
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 pub enum BlockParameter {
     Latest,
     Earliest,
@@ -22,7 +23,13 @@ impl Serialize for BlockParameter {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+impl Default for BlockParameter {
+    fn default() -> Self {
+        BlockParameter::Latest
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct TransactionRequest {
     pub from: H160,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,7 +47,7 @@ pub struct TransactionRequest {
     pub nonce: Option<U256>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Transaction {
     #[serde(rename = "blockHash")]
     pub block_hash: Option<H256>,
@@ -62,7 +69,7 @@ pub struct Transaction {
     pub s: U256,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TransactionReceipt {
     #[serde(rename = "transactionHash")]
     pub transaction_hash: H256,
@@ -86,7 +93,7 @@ pub struct TransactionReceipt {
     pub status: U64,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Log {
     pub address: H160,
     pub topics: Vec<H256>,
@@ -179,7 +186,7 @@ impl Serialize for PrivateKey {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Block {
     pub number: Option<U64>,
     pub hash: Option<H256>,
@@ -212,14 +219,14 @@ pub struct Block {
     pub uncles: Vec<H256>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum TransactionOrHash {
     Transaction(Transaction),
     Hash(H256),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct Call {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub from: Option<H160>,
@@ -235,7 +242,7 @@ pub struct Call {
     pub data: Option<Bytes>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct GasCall {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub from: Option<H160>,
@@ -250,4 +257,33 @@ pub struct GasCall {
     pub value: Option<U256>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Bytes>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+pub struct Filter {
+    #[serde(rename = "fromBlock")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_block: Option<BlockParameter>,
+    #[serde(rename = "toBlock")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_block: Option<BlockParameter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<ValueOrVec<H160>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub topics: Option<Vec<Option<ValueOrVec<H256>>>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ValueOrVec<T> {
+    Value(T),
+    Vec(Vec<T>),
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum HashOrLog {
+    H256(H256),
+    Log(Log),
 }

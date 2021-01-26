@@ -1,8 +1,10 @@
 use ethane::rpc;
-use ethane::types::{BlockParameter, Bytes, Call, GasCall, TransactionRequest, H256, U256, U64};
+use ethane::types::{
+    BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, H64, U128,
+    U256, U64,
+};
 use std::path::Path;
 use std::str::FromStr;
-use tiny_keccak::{Hasher, Keccak};
 
 pub mod helper;
 use helper::*;
@@ -342,8 +344,8 @@ fn test_eth_sign() {
     );
 }
 
-// TODO: This test currently fails. However I am not sure if this is a short coming
-// TODO: of the test case or geth. Compare https://github.com/ethereum/go-ethereum/issues/22223
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/go-ethereum/issues/22223
 #[test]
 #[ignore]
 fn test_eth_sign_transaction() {
@@ -357,8 +359,9 @@ fn test_eth_sign_transaction() {
     rpc_call_test_some(&mut client, rpc::eth_sign_transaction(transaction));
 }
 
-// TODO: Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
-// TODO: it should return only the transaction hash
+// DEVIATION FROM SPEC
+// Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
+// it should return only the transaction hash
 #[test]
 #[ignore]
 fn test_eth_send_raw_transaction() {
@@ -386,11 +389,7 @@ fn test_eth_call() {
         &Path::new(TEST_CONTRACT_PATH),
         TEST_CONTRACT_NAME,
     );
-
-    let mut hasher = Keccak::v256();
-    hasher.update(b"solution()");
-    let mut out = [0u8; 32];
-    hasher.finalize(&mut out);
+    let out = keccak(b"solution()");
     let call = Call {
         to: contract_address,
         data: Some(Bytes::from_slice(&out[..4])),
@@ -518,10 +517,209 @@ fn test_eth_get_uncle_by_block_number_and_index() {
     );
 }
 
-// TODO: This test fails with geth because the method is not available, although it should according to JSON RPC spec
+// DEVIATION FROM SPEC
+// This test fails with geth because the method is not available
 #[test]
 #[ignore]
 fn test_eth_get_compilers() {
+    assert!(false, "This RPC is not supported anymore.");
+}
+
+// DEVIATION FROM SPEC
+// This test fails with geth because the method is not available
+#[test]
+#[ignore]
+fn test_eth_compile_lll() {
+    assert!(false, "This RPC is not supported anymore.");
+}
+
+// DEVIATION FROM SPEC
+// This test fails with geth because the method is not available
+#[test]
+#[ignore]
+fn test_eth_compile_solidity() {
+    assert!(false, "This RPC is not supported anymore.");
+}
+
+// DEVIATION FROM SPEC
+// This test fails with geth because the method is not available
+#[test]
+#[ignore]
+fn test_eth_compile_serpent() {
+    assert!(false, "This RPC is not supported anymore.");
+}
+
+#[test]
+fn test_eth_new_filter() {
     let mut client = Client::ws();
-    rpc_call_test_some(&mut client, rpc::eth_get_compilers());
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    );
+    let topic = keccak(b"Solution(uint256)");
+    let filter = Filter {
+        from_block: Some(BlockParameter::Earliest),
+        to_block: Some(BlockParameter::Latest),
+        address: Some(ValueOrVec::Value(contract_address)),
+        topics: Some(vec![Some(ValueOrVec::Value(H256::from_slice(&topic)))]),
+    };
+    rpc_call_test_some(&mut client, rpc::eth_new_filter(filter));
+}
+
+#[test]
+fn test_eth_new_block_filter() {
+    let mut client = Client::ws();
+    rpc_call_test_some(&mut client, rpc::eth_new_block_filter());
+}
+
+#[test]
+fn test_eth_new_pending_transaction_filter() {
+    let mut client = Client::ws();
+    rpc_call_test_some(&mut client, rpc::eth_new_pending_transaction_filter());
+}
+
+#[test]
+fn test_eth_uninstall_filter() {
+    let mut client = Client::ws();
+    let filter_id = client.call(rpc::eth_new_block_filter()).unwrap();
+    rpc_call_test_expected(&mut client, rpc::eth_uninstall_filter(filter_id), true);
+}
+
+#[test]
+fn test_eth_get_filter_changes_new_filter() {
+    let mut client = Client::ws();
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    );
+    let topic = keccak(b"Solution(uint256)");
+    let filter = Filter {
+        from_block: Some(BlockParameter::Earliest),
+        to_block: Some(BlockParameter::Latest),
+        address: Some(ValueOrVec::Value(contract_address)),
+        topics: Some(vec![Some(ValueOrVec::Value(H256::from_slice(&topic)))]),
+    };
+    let filter_id = client.call(rpc::eth_new_filter(filter)).unwrap();
+    let out = keccak(b"set_pos0()");
+    let tx = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(contract_address),
+        data: Some(Bytes::from_slice(&out[..4])),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(
+        &mut client,
+        rpc::eth_get_filter_changes(U128::from(filter_id)),
+    );
+}
+
+#[test]
+fn test_eth_get_filter_changes_block_filter() {
+    let mut client = Client::ws();
+    let tx = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let filter_id = client.call(rpc::eth_new_block_filter()).unwrap();
+    let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(
+        &mut client,
+        rpc::eth_get_filter_changes(U128::from(filter_id)),
+    );
+}
+
+// DEVIATION FROM SPEC
+// This does not seem to work, although this is very similar to the test eth_get_filter_changes_block_filter
+#[test]
+#[ignore]
+fn test_eth_get_filter_logs() {
+    let mut client = Client::ws();
+    let tx = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(create_account(&mut client).1),
+        value: Some(U256::zero()),
+        ..Default::default()
+    };
+    let filter_id = client.call(rpc::eth_new_block_filter()).unwrap();
+    let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(&mut client, rpc::eth_get_filter_logs(U128::from(filter_id)));
+}
+
+#[test]
+fn test_eth_get_logs() {
+    let mut client = Client::ws();
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    );
+    let topic = keccak(b"Solution(uint256)");
+    let filter = Filter {
+        from_block: Some(BlockParameter::Earliest),
+        to_block: Some(BlockParameter::Latest),
+        address: Some(ValueOrVec::Value(contract_address)),
+        topics: Some(vec![Some(ValueOrVec::Value(H256::from_slice(&topic)))]),
+    };
+    let out = keccak(b"set_pos0()");
+    let tx = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(contract_address),
+        data: Some(Bytes::from_slice(&out[..4])),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(&mut client, rpc::eth_get_logs(filter));
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[test]
+#[ignore]
+#[allow(deprecated)]
+fn test_eth_get_work() {
+    let mut client = Client::ws();
+    rpc_call_test_some(&mut client, rpc::eth_get_work());
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[test]
+#[ignore]
+#[allow(deprecated)]
+fn test_eth_submit_work() {
+    let mut client = Client::ws();
+    rpc_call_test_expected(
+        &mut client,
+        rpc::eth_submit_work(H64::zero(), H256::zero(), H256::zero()),
+        false,
+    );
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[test]
+#[ignore]
+#[allow(deprecated)]
+fn test_eth_submit_hashrate() {
+    let mut client = Client::ws();
+    rpc_call_test_expected(
+        &mut client,
+        rpc::eth_submit_hashrate(H256::zero(), H256::zero()),
+        false,
+    );
 }

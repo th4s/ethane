@@ -1,9 +1,8 @@
 use super::Rpc;
 use crate::types::{
-    Block, BlockParameter, Bytes, Call, GasCall, Transaction, TransactionReceipt,
-    TransactionRequest,
+    Block, BlockParameter, Bytes, Call, Filter, GasCall, HashOrLog, Transaction,
+    TransactionReceipt, TransactionRequest, H160, H256, H64, U128, U256, U64,
 };
-use ethereum_types::{H160, H256, U256, U64};
 
 pub fn eth_protocol_version() -> Rpc<String> {
     Rpc::new("eth_protocolVersion")
@@ -136,12 +135,17 @@ pub fn eth_sign(address: H160, data: Bytes) -> Rpc<Bytes> {
     rpc
 }
 
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/go-ethereum/issues/22223
 pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<Bytes> {
     let mut rpc = Rpc::new("eth_signTransaction");
     rpc.add_param(transaction);
     rpc
 }
 
+// DEVIATION FROM SPEC
+// Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
+// it should return only the transaction hash
 pub fn eth_send_raw_transaction(raw_transaction: Bytes) -> Rpc<H256> {
     let mut rpc = Rpc::new("eth_sendRawTransaction");
     rpc.add_param(raw_transaction);
@@ -213,104 +217,104 @@ pub fn eth_get_uncle_by_block_number_and_index(
     rpc
 }
 
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/EIPs/issues/209
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
 pub fn eth_get_compilers() -> Rpc<Vec<String>> {
     Rpc::new("eth_getCompilers")
 }
 
-//
-//     fn eth_compile_lll(id: u32, source_code: String) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_compileLLL")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &source_code)
-//     }
-//
-//     fn eth_compile_solidity(id: u32, source_code: String) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_compileSolidity")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &source_code)
-//     }
-//
-//     fn eth_compile_serpent(id: u32, source_code: String) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_compileSerpent")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &source_code)
-//     }
-//
-//     fn eth_new_filter(id: u32, filter: Filter) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_newFilter")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &filter.to_string())
-//     }
-//
-//     fn eth_new_block_filter(id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_newBlockFilter")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, "")
-//     }
-//
-//     fn eth_new_pending_transaction_filter(id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_newPendingTransactionFilter")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, "")
-//     }
-//
-//     fn eth_uninstall_filter(id: u32, filter_id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_uninstallFilter")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &format!("{:#x}", filter_id))
-//     }
-//
-//     fn eth_get_filter_changes(id: u32, filter_id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getFilterChanges")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &format!("{:#x}", filter_id))
-//     }
-//
-//     fn eth_get_filter_logs(id: u32, filter_id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getFilterLogs")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &format!("{:#x}", filter_id))
-//     }
-//
-//     fn eth_get_logs(id: u32, filter: Filter234) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getLogs")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &filter.to_string())
-//     }
-//
-//     fn eth_get_work(id: u32) -> String {
-//         String::from(CMD)
-//             .replace(METHOD, "eth_getWork")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, "")
-//     }
-//
-//     fn eth_submit_work(id: u32, nonce: H64, hash: H256, digest: H256) -> String {
-//         let params: String =
-//             vec![nonce.to_string(), hash.to_string(), digest.to_string()].join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_submitWork")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-//
-//     fn eth_submit_hashrate(id: u32, hash_rate: H256, client_id: H256) -> String {
-//         let params: String = vec![hash_rate.to_string(), client_id.to_string()].join(", ");
-//
-//         String::from(CMD)
-//             .replace(METHOD, "eth_submitHashrate")
-//             .replace(ID, &id.to_string())
-//             .replace(PARAMS, &params)
-//     }
-// }
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/EIPs/issues/209
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_compile_lll(source_code: String) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("eth_compileLLL");
+    rpc.add_param(source_code);
+    rpc
+}
+
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/EIPs/issues/209
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_compile_solidity(source_code: String) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("eth_compileSolidity");
+    rpc.add_param(source_code);
+    rpc
+}
+
+// DEVIATION FROM SPEC
+// c.f. https://github.com/ethereum/EIPs/issues/209
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_compile_serpent(source_code: String) -> Rpc<Bytes> {
+    let mut rpc = Rpc::new("eth_compileSerpent");
+    rpc.add_param(source_code);
+    rpc
+}
+
+pub fn eth_new_filter(filter: Filter) -> Rpc<U128> {
+    let mut rpc = Rpc::new("eth_newFilter");
+    rpc.add_param(filter);
+    rpc
+}
+
+pub fn eth_new_block_filter() -> Rpc<U128> {
+    Rpc::new("eth_newBlockFilter")
+}
+
+pub fn eth_new_pending_transaction_filter() -> Rpc<U128> {
+    Rpc::new("eth_newPendingTransactionFilter")
+}
+
+pub fn eth_uninstall_filter(filter_id: U128) -> Rpc<bool> {
+    let mut rpc = Rpc::new("eth_uninstallFilter");
+    rpc.add_param(filter_id);
+    rpc
+}
+
+pub fn eth_get_filter_changes(filter_id: U128) -> Rpc<Vec<HashOrLog>> {
+    let mut rpc = Rpc::new("eth_getFilterChanges");
+    rpc.add_param(filter_id);
+    rpc
+}
+
+// DEVIATION FROM SPEC
+// Does not seem to work with a block_filter_id or pending_transactions_filter_id
+pub fn eth_get_filter_logs(filter_id: U128) -> Rpc<Vec<HashOrLog>> {
+    let mut rpc = Rpc::new("eth_getFilterLogs");
+    rpc.add_param(filter_id);
+    rpc
+}
+
+pub fn eth_get_logs(filter: Filter) -> Rpc<Vec<HashOrLog>> {
+    let mut rpc = Rpc::new("eth_getLogs");
+    rpc.add_param(filter);
+    rpc
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_get_work() -> Rpc<Vec<H256>> {
+    Rpc::new("eth_getWork")
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_submit_work(nonce: H64, hash: H256, digest: H256) -> Rpc<bool> {
+    let mut rpc = Rpc::new("eth_submitWork");
+    rpc.add_param(nonce);
+    rpc.add_param(hash);
+    rpc.add_param(digest);
+    rpc
+}
+
+// DEVIATION FROM SPEC
+// Not supported by geth
+#[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
+pub fn eth_submit_hashrate(hash_rate: H256, client_id: H256) -> Rpc<bool> {
+    let mut rpc = Rpc::new("eth_submitHashrate");
+    rpc.add_param(hash_rate);
+    rpc.add_param(client_id);
+    rpc
+}
