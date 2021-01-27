@@ -16,7 +16,7 @@ pub struct WebSocket(WebSocketTungstenite<AutoStream>);
 impl WebSocket {
     /// Create a new websocket connection to the specified Uri.
     /// When used with [credentials](Credentials), will try to attempt HTTP basic authentication for the handshake request.
-    pub fn new(
+    pub(crate) fn new(
         domain: &str,
         credentials: Option<Credentials>,
     ) -> Result<WebSocket, WebSocketError> {
@@ -28,25 +28,19 @@ impl WebSocket {
         Ok(WebSocket(ws.0))
     }
 
-    pub fn read(&mut self) -> Result<Message, WebSocketError> {
+    pub(crate) fn read(&mut self) -> Result<Message, WebSocketError> {
         let message = self.0.read_message()?;
         trace!("Reading from websocket: {}", &message);
         Ok(message)
     }
 
-    pub fn write_text(&mut self, message: String) -> Result<(), WebSocketError> {
+    pub(crate) fn write_text(&mut self, message: String) -> Result<(), WebSocketError> {
         trace!("Writing to websocket: {}", message);
         self.0.write_message(Message::Text(message))?;
         Ok(())
     }
 
-    pub fn write_binary(&mut self, binary: Vec<u8>) -> Result<(), WebSocketError> {
-        trace!("Writing to websocket: {:?}", binary);
-        self.0.write_message(Message::Binary(binary))?;
-        Ok(())
-    }
-
-    pub fn close(&mut self) -> Result<(), WebSocketError> {
+    pub(crate) fn close(&mut self) -> Result<(), WebSocketError> {
         debug!("Closing websocket connection");
         let close_frame = CloseFrame {
             code: CloseCode::Normal,

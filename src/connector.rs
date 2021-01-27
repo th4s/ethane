@@ -39,9 +39,11 @@ impl<T: JsonRequest> Connector<T> {
     }
 
     fn get_command_id(&mut self) -> Result<u32, ConnectorError> {
-        trace!("Retrieving id from pool...");
         match self.1.pop_front() {
-            Some(inner) => Ok(inner),
+            Some(inner) => {
+                trace!("Using id {} for request", inner);
+                Ok(inner)
+            }
             None => Err(ConnectorError::NoTicketId),
         }
     }
@@ -50,7 +52,6 @@ impl<T: JsonRequest> Connector<T> {
         &mut self,
         rpc: &Rpc<U>,
     ) -> Result<String, ConnectorError> {
-        trace!("Sending request...");
         let response = self.0.json_request(serde_json::to_string(rpc)?)?;
 
         if !response.contains(&format!("\"id\":{}", rpc.id)) {
