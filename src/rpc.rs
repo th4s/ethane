@@ -10,11 +10,13 @@ use thiserror::Error;
 pub use eth::*;
 pub use net::*;
 pub use personal::*;
+pub use txpool::*;
 pub use web3::*;
 
 mod eth;
 mod net;
 mod personal;
+mod txpool;
 mod web3;
 
 pub trait Call {

@@ -1,6 +1,7 @@
 pub use ethereum_types::{Bloom, H160, H256, H64, U128, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 
@@ -64,9 +65,9 @@ pub struct Transaction {
     #[serde(rename = "transactionIndex")]
     pub transaction_index: Option<U64>,
     pub value: U256,
-    pub v: U64,
-    pub r: U256,
-    pub s: U256,
+    pub v: Option<U64>,
+    pub r: Option<U256>,
+    pub s: Option<U256>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -286,4 +287,22 @@ pub enum ValueOrVec<T> {
 pub enum HashOrLog {
     H256(H256),
     Log(Log),
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct TxPoolStatus {
+    pub pending: U256,
+    pub queued: U256,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct TxPoolContent {
+    pending: HashMap<H160, HashMap<String, Transaction>>,
+    queued: HashMap<H160, HashMap<String, Transaction>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct TxPoolInspect {
+    pending: HashMap<H160, HashMap<String, String>>,
+    queued: HashMap<H160, HashMap<String, String>>,
 }
