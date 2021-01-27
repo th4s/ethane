@@ -1,8 +1,8 @@
 use crate::rpc::Rpc;
-use crate::transport::ws::{WebSocket, WebSocketError};
-use crate::transport::{JsonRequest, TransportError};
-use crate::Credentials;
-use log::{debug, trace};
+use crate::transport::http::{Http, HttpError};
+use crate::transport::websocket::{WebSocket, WebSocketError};
+use crate::transport::{Credentials, JsonRequest, TransportError};
+use log::{debug, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::VecDeque;
@@ -12,16 +12,29 @@ use thiserror::Error;
 pub struct Connector<T>(T, VecDeque<u32>);
 
 impl Connector<WebSocket> {
-    pub fn ws(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
-        debug!("Connecting to geth node...");
+    pub fn websocket(
+        domain: &str,
+        credentials: Option<Credentials>,
+    ) -> Result<Self, ConnectorError> {
+        info!("Creating connector over websocket...");
         Ok(Connector(
-            WebSocket::new(domain, credentials).map_err(ConnectorError::Initialization)?,
+            WebSocket::new(domain, credentials).map_err(ConnectorError::WsInit)?,
             (0..1000).collect(),
         ))
     }
 
     pub fn close(&mut self) -> Result<(), WebSocketError> {
         self.0.close()
+    }
+}
+
+impl Connector<Http> {
+    pub fn http(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
+        info!("Creating connector over http...");
+        Ok(Connector(
+            Http::new(domain, credentials).map_err(ConnectorError::HttpInit)?,
+            (0..1000).collect(),
+        ))
     }
 }
 
@@ -84,7 +97,9 @@ pub struct JsonError {
 #[derive(Debug, Error)]
 pub enum ConnectorError {
     #[error("Connector Error: {0}")]
-    Initialization(WebSocketError),
+    WsInit(WebSocketError),
+    #[error("Connector Error: {0}")]
+    HttpInit(HttpError),
     #[error("Connector Error: Maximum number of connections reached")]
     NoTicketId,
     #[error("Connector Error: {0:?}")]

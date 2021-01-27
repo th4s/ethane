@@ -1,5 +1,5 @@
+use super::Credentials;
 use super::{JsonRequest, TransportError};
-use crate::Credentials;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
 use std::borrow::Cow;

@@ -3,9 +3,3 @@ pub mod connector;
 pub mod rpc;
 pub mod transport;
 pub mod types;
-
-/// Used for HTTP basic authentication during the handshake request
-pub struct Credentials {
-    pub username: String,
-    pub password: String,
-}

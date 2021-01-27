@@ -1,9 +1,10 @@
 use ethane::connector::{Connector, ConnectorError};
 use ethane::rpc::{self, Rpc};
-use ethane::transport::ws::WebSocket;
+use ethane::transport::websocket::WebSocket;
 use ethane::transport::JsonRequest;
 use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256};
 
+use ethane::transport::http::Http;
 use rand::Rng;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -21,9 +22,37 @@ pub const FIX_ADDRESS: &str = "0xDc677f7C5060B0b441d30F361D0c8529Ac04E099";
 pub const KECCAK_HASH_OF_EMPTY_STRING: &str =
     "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
+pub enum ClientTypeWrapper {
+    Websocket(Client<WebSocket>),
+    Http(Client<Http>),
+}
+
+impl ClientTypeWrapper {
+    pub fn new_from_env() -> ClientTypeWrapper {
+        match std::env::var("CON_TYPE")
+            .expect("Please specify env value CON_TYPE as either 'http' or 'ws'")
+            .as_str()
+        {
+            "http" => ClientTypeWrapper::Http(Client::http()),
+            "ws" => ClientTypeWrapper::Websocket(Client::ws()),
+            _ => panic!("Valid values for TEST_CONNECTION are either 'http' or 'ws'"),
+        }
+    }
+
+    pub fn call<U: DeserializeOwned + Debug + PartialEq>(
+        &mut self,
+        rpc: Rpc<U>,
+    ) -> Result<U, ConnectorError> {
+        match self {
+            Self::Websocket(client) => client.call(rpc),
+            Self::Http(client) => client.call(rpc),
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub struct Client<T: JsonRequest> {
-    client: Connector<T>,
+    connector: Connector<T>,
     process: Process,
 }
 
@@ -32,7 +61,7 @@ impl<T: JsonRequest> Client<T> {
         &mut self,
         rpc: Rpc<U>,
     ) -> Result<U, ConnectorError> {
-        self.client.call(rpc)
+        self.connector.call(rpc)
     }
 }
 
@@ -40,8 +69,19 @@ impl Client<WebSocket> {
     pub fn ws() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
-        let client = Connector::ws(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
-        Client { client, process }
+        let connector =
+            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
+        Client { connector, process }
+    }
+}
+
+impl Client<Http> {
+    pub fn http() -> Self {
+        let process = Process::new();
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        let connector =
+            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), None).unwrap();
+        Client { connector, process }
     }
 }
 
