@@ -1,7 +1,7 @@
 use ethane::geth::GethConnector;
 use ethane::rpc::{self, Call, CallError, Rpc};
 use ethane::transport::ws::WebSocket;
-use ethane::transport::Request;
+use ethane::transport::JsonRequest;
 use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256};
 
 use rand::Rng;
@@ -22,12 +22,12 @@ pub const KECCAK_HASH_OF_EMPTY_STRING: &str =
     "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
 #[allow(dead_code)]
-pub struct Client<T: Request> {
+pub struct Client<T: JsonRequest> {
     client: GethConnector<T>,
     process: Process,
 }
 
-impl<T: Request> Client<T> {
+impl<T: JsonRequest> Client<T> {
     pub fn call<U: DeserializeOwned + Debug + PartialEq>(
         &mut self,
         rpc: Rpc<U>,
@@ -103,7 +103,7 @@ impl Drop for Process {
     }
 }
 
-pub fn wait_for_transaction<U: Request>(client: &mut Client<U>, tx_hash: H256) {
+pub fn wait_for_transaction<U: JsonRequest>(client: &mut Client<U>, tx_hash: H256) {
     loop {
         let transaction = client
             .call(rpc::eth_get_transaction_by_hash(tx_hash))
@@ -128,7 +128,7 @@ pub fn create_secret() -> H256 {
     H256::from_str(&secret).unwrap()
 }
 
-pub fn import_account<U: Request>(client: &mut Client<U>, secret: H256) -> H160 {
+pub fn import_account<U: JsonRequest>(client: &mut Client<U>, secret: H256) -> H160 {
     client
         .call(rpc::personal_import_raw_key(
             PrivateKey::NonPrefixed(secret),
@@ -137,7 +137,7 @@ pub fn import_account<U: Request>(client: &mut Client<U>, secret: H256) -> H160 
         .unwrap()
 }
 
-pub fn unlock_account<U: Request>(client: &mut Client<U>, address: H160) -> bool {
+pub fn unlock_account<U: JsonRequest>(client: &mut Client<U>, address: H160) -> bool {
     client
         .call(rpc::personal_unlock_account(
             address,
@@ -147,7 +147,7 @@ pub fn unlock_account<U: Request>(client: &mut Client<U>, address: H160) -> bool
         .unwrap()
 }
 
-pub fn prefund_account<U: Request>(client: &mut Client<U>, address: H160) -> H256 {
+pub fn prefund_account<U: JsonRequest>(client: &mut Client<U>, address: H160) -> H256 {
     let coinbase = client.call(rpc::eth_coinbase()).unwrap();
     let tx = TransactionRequest {
         from: coinbase,
@@ -160,7 +160,7 @@ pub fn prefund_account<U: Request>(client: &mut Client<U>, address: H160) -> H25
     tx_hash
 }
 
-pub fn create_account<U: Request>(client: &mut Client<U>) -> (H256, H160) {
+pub fn create_account<U: JsonRequest>(client: &mut Client<U>) -> (H256, H160) {
     let secret = create_secret();
     let address = import_account(client, secret);
     unlock_account(client, address);
@@ -180,7 +180,7 @@ pub fn compile_contract(path: &Path, contract_name: &str) -> Value {
     output["contracts"][String::from(path_as_str) + ":" + contract_name].clone()
 }
 
-pub fn deploy_contract<U: Request>(
+pub fn deploy_contract<U: JsonRequest>(
     client: &mut Client<U>,
     address: H160,
     path: &Path,
@@ -222,7 +222,7 @@ pub fn keccak(input: &[u8]) -> [u8; 32] {
     out
 }
 
-pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Request>(
+pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: JsonRequest>(
     client: &mut Client<U>,
     rpc: Rpc<T>,
     expected: T,
@@ -236,7 +236,7 @@ pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Re
     }
 }
 
-pub fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq, U: Request>(
+pub fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq, U: JsonRequest>(
     client: &mut Client<U>,
     rpc: Rpc<T>,
 ) {

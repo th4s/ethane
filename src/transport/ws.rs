@@ -1,4 +1,4 @@
-use super::{Request, TransportError};
+use super::{JsonRequest, TransportError};
 use crate::Credentials;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
@@ -34,9 +34,9 @@ impl WebSocket {
         Ok(message)
     }
 
-    pub fn write_text(&mut self, message: &str) -> Result<(), WebSocketError> {
+    pub fn write_text(&mut self, message: String) -> Result<(), WebSocketError> {
         trace!("Writing to websocket: {}", message);
-        self.0.write_message(Message::Text(message.to_string()))?;
+        self.0.write_message(Message::Text(message))?;
         Ok(())
     }
 
@@ -57,8 +57,8 @@ impl WebSocket {
     }
 }
 
-impl Request for WebSocket {
-    fn request(&mut self, cmd: &str) -> Result<String, TransportError> {
+impl JsonRequest for WebSocket {
+    fn json_request(&mut self, cmd: String) -> Result<String, TransportError> {
         let _write = self.write_text(cmd)?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
@@ -177,7 +177,7 @@ mod tests {
     fn test_new() {
         spawn_websocket_server(ping_pong, 3001);
         let mut ws_client = WebSocket::new("ws://localhost:3001", None).unwrap();
-        ws_client.write_text("Ping").unwrap();
+        ws_client.write_text(String::from("Ping")).unwrap();
         match ws_client.read() {
             Ok(Message::Text(text)) => assert_eq!(text, "Ping Pong"),
             _ => assert!(false),

@@ -1,14 +1,15 @@
-use crate::rpc::{Call, CallError, JsonError, Response, Rpc, RpcResult};
+use crate::rpc::{Call, CallError, Rpc};
 use crate::transport::ws::{WebSocket, WebSocketError};
-use crate::transport::{Request, TransportError};
+use crate::transport::{JsonRequest, TransportError};
 use crate::Credentials;
 use log::{debug, trace};
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use thiserror::Error;
 
-pub struct GethConnector<T: Request>(T, VecDeque<u32>);
+pub struct GethConnector<T: JsonRequest>(T, VecDeque<u32>);
 
 impl GethConnector<WebSocket> {
     pub fn ws(domain: &str, credentials: Option<Credentials>) -> Result<Self, GethError> {
@@ -24,18 +25,18 @@ impl GethConnector<WebSocket> {
     }
 }
 
-impl<T: Request> Call for GethConnector<T> {
+impl<T: JsonRequest> Call for GethConnector<T> {
     fn call<U: DeserializeOwned + Debug>(&mut self, mut rpc: Rpc<U>) -> Result<U, CallError> {
         let command_id = self.get_command_id()?;
         rpc.id = command_id;
         debug!("Calling rpc method: {:?}", &rpc);
-        let response = self.send_request(rpc)?;
+        let response = self.send_request(&rpc)?;
         self.1.push_back(command_id);
-        deserialize(response).map_err(|err| err.into())
+        deserialize(&response).map_err(|err| err.into())
     }
 }
 
-impl<T: Request> GethConnector<T> {
+impl<T: JsonRequest> GethConnector<T> {
     fn get_command_id(&mut self) -> Result<u32, GethError> {
         trace!("Retrieving id from pool...");
         match self.1.pop_front() {
@@ -46,10 +47,10 @@ impl<T: Request> GethConnector<T> {
 
     fn send_request<U: DeserializeOwned + Debug>(
         &mut self,
-        rpc: Rpc<U>,
+        rpc: &Rpc<U>,
     ) -> Result<String, GethError> {
         trace!("Sending request...");
-        let response = self.0.request(&serde_json::to_string(&rpc)?)?;
+        let response = self.0.json_request(serde_json::to_string(rpc)?)?;
 
         if !response.contains(&format!("\"id\":{}", rpc.id)) {
             return Err(GethError::WrongId);
@@ -58,9 +59,9 @@ impl<T: Request> GethConnector<T> {
     }
 }
 
-fn deserialize<U: DeserializeOwned + Debug>(response: String) -> Result<U, GethError> {
+fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, GethError> {
     trace!("Deserializing response {}", response);
-    match serde_json::from_str::<Response<U>>(&response) {
+    match serde_json::from_str::<Response<U>>(response) {
         Ok(Response {
             result_or_error: inner,
             ..
@@ -70,6 +71,12 @@ fn deserialize<U: DeserializeOwned + Debug>(response: String) -> Result<U, GethE
         },
         Err(err) => Err(GethError::from(err)),
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct JsonError {
+    code: i32,
+    message: String,
 }
 
 #[derive(Debug, Error)]
@@ -86,4 +93,21 @@ pub enum GethError {
     TransportError(#[from] TransportError),
     #[error("Geth Error: Received an unexpected message id")]
     WrongId,
+}
+
+#[derive(Deserialize, Debug)]
+struct Response<T> {
+    pub id: u32,
+    #[serde(rename = "jsonrpc")]
+    pub json_rpc: String,
+    #[serde(flatten)]
+    pub result_or_error: RpcResult<T>,
+}
+
+#[derive(Deserialize, Debug)]
+enum RpcResult<T> {
+    #[serde(rename = "result")]
+    Result(T),
+    #[serde(rename = "error")]
+    Error(JsonError),
 }
