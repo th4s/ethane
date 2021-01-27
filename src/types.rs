@@ -297,12 +297,12 @@ pub struct TxPoolStatus {
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TxPoolContent {
-    pending: HashMap<H160, HashMap<String, Transaction>>,
-    queued: HashMap<H160, HashMap<String, Transaction>>,
+    pub pending: HashMap<H160, HashMap<String, Transaction>>,
+    pub queued: HashMap<H160, HashMap<String, Transaction>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TxPoolInspect {
-    pending: HashMap<H160, HashMap<String, String>>,
-    queued: HashMap<H160, HashMap<String, String>>,
+    pub pending: HashMap<H160, HashMap<String, String>>,
+    pub queued: HashMap<H160, HashMap<String, String>>,
 }

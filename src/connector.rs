@@ -1,4 +1,4 @@
-use crate::rpc::{Call, CallError, Rpc};
+use crate::rpc::Rpc;
 use crate::transport::ws::{WebSocket, WebSocketError};
 use crate::transport::{JsonRequest, TransportError};
 use crate::Credentials;
@@ -9,13 +9,13 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 use thiserror::Error;
 
-pub struct GethConnector<T: JsonRequest>(T, VecDeque<u32>);
+pub struct Connector<T>(T, VecDeque<u32>);
 
-impl GethConnector<WebSocket> {
-    pub fn ws(domain: &str, credentials: Option<Credentials>) -> Result<Self, GethError> {
+impl Connector<WebSocket> {
+    pub fn ws(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
         debug!("Connecting to geth node...");
-        Ok(GethConnector(
-            WebSocket::new(domain, credentials).map_err(GethError::Initialization)?,
+        Ok(Connector(
+            WebSocket::new(domain, credentials).map_err(ConnectorError::Initialization)?,
             (0..1000).collect(),
         ))
     }
@@ -25,41 +25,42 @@ impl GethConnector<WebSocket> {
     }
 }
 
-impl<T: JsonRequest> Call for GethConnector<T> {
-    fn call<U: DeserializeOwned + Debug>(&mut self, mut rpc: Rpc<U>) -> Result<U, CallError> {
+impl<T: JsonRequest> Connector<T> {
+    pub fn call<U: DeserializeOwned + Debug>(
+        &mut self,
+        mut rpc: Rpc<U>,
+    ) -> Result<U, ConnectorError> {
         let command_id = self.get_command_id()?;
         rpc.id = command_id;
         debug!("Calling rpc method: {:?}", &rpc);
         let response = self.send_request(&rpc)?;
         self.1.push_back(command_id);
-        deserialize(&response).map_err(|err| err.into())
+        deserialize(&response)
     }
-}
 
-impl<T: JsonRequest> GethConnector<T> {
-    fn get_command_id(&mut self) -> Result<u32, GethError> {
+    fn get_command_id(&mut self) -> Result<u32, ConnectorError> {
         trace!("Retrieving id from pool...");
         match self.1.pop_front() {
             Some(inner) => Ok(inner),
-            None => Err(GethError::NoTicketId),
+            None => Err(ConnectorError::NoTicketId),
         }
     }
 
     fn send_request<U: DeserializeOwned + Debug>(
         &mut self,
         rpc: &Rpc<U>,
-    ) -> Result<String, GethError> {
+    ) -> Result<String, ConnectorError> {
         trace!("Sending request...");
         let response = self.0.json_request(serde_json::to_string(rpc)?)?;
 
         if !response.contains(&format!("\"id\":{}", rpc.id)) {
-            return Err(GethError::WrongId);
+            return Err(ConnectorError::WrongId);
         }
         Ok(response)
     }
 }
 
-fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, GethError> {
+fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, ConnectorError> {
     trace!("Deserializing response {}", response);
     match serde_json::from_str::<Response<U>>(response) {
         Ok(Response {
@@ -67,9 +68,9 @@ fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, GethErr
             ..
         }) => match inner {
             RpcResult::Result(result) => Ok(result),
-            RpcResult::Error(err) => Err(GethError::JsonRpc(err)),
+            RpcResult::Error(err) => Err(ConnectorError::JsonRpc(err)),
         },
-        Err(err) => Err(GethError::from(err)),
+        Err(err) => Err(ConnectorError::from(err)),
     }
 }
 
@@ -80,18 +81,18 @@ pub struct JsonError {
 }
 
 #[derive(Debug, Error)]
-pub enum GethError {
-    #[error("Geth Error: {0}")]
+pub enum ConnectorError {
+    #[error("Connector Error: {0}")]
     Initialization(WebSocketError),
-    #[error("Geth Error: No connection left in connection pool")]
+    #[error("Connector Error: Maximum number of connections reached")]
     NoTicketId,
-    #[error("Geth Error: {0:?}")]
+    #[error("Connector Error: {0:?}")]
     JsonRpc(JsonError),
-    #[error("Geth Error: {0}")]
+    #[error("Connector Error: {0}")]
     Serde(#[from] serde_json::Error),
-    #[error("Geth Error: {0}")]
+    #[error("Connector Error: {0}")]
     TransportError(#[from] TransportError),
-    #[error("Geth Error: Received an unexpected message id")]
+    #[error("Connector Error: Received an unexpected message id")]
     WrongId,
 }
 

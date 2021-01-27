@@ -1,5 +1,5 @@
-use ethane::geth::GethConnector;
-use ethane::rpc::{self, Call, CallError, Rpc};
+use ethane::connector::{Connector, ConnectorError};
+use ethane::rpc::{self, Rpc};
 use ethane::transport::ws::WebSocket;
 use ethane::transport::JsonRequest;
 use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256};
@@ -23,7 +23,7 @@ pub const KECCAK_HASH_OF_EMPTY_STRING: &str =
 
 #[allow(dead_code)]
 pub struct Client<T: JsonRequest> {
-    client: GethConnector<T>,
+    client: Connector<T>,
     process: Process,
 }
 
@@ -31,7 +31,7 @@ impl<T: JsonRequest> Client<T> {
     pub fn call<U: DeserializeOwned + Debug + PartialEq>(
         &mut self,
         rpc: Rpc<U>,
-    ) -> Result<U, CallError> {
+    ) -> Result<U, ConnectorError> {
         self.client.call(rpc)
     }
 }
@@ -40,8 +40,7 @@ impl Client<WebSocket> {
     pub fn ws() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
-        let client =
-            GethConnector::ws(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
+        let client = Connector::ws(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
         Client { client, process }
     }
 }

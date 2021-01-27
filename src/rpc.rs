@@ -1,11 +1,9 @@
-use crate::geth::GethError;
 use log::error;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use thiserror::Error;
 
 pub use eth::*;
 pub use net::*;
@@ -18,16 +16,6 @@ mod net;
 mod personal;
 mod txpool;
 mod web3;
-
-pub trait Call {
-    fn call<T: DeserializeOwned + Debug>(&mut self, rpc: Rpc<T>) -> Result<T, CallError>;
-}
-
-#[derive(Debug, Error)]
-pub enum CallError {
-    #[error("{0}")]
-    GethError(#[from] GethError),
-}
 
 #[derive(Serialize, Debug)]
 pub struct Rpc<T: DeserializeOwned + Debug> {
