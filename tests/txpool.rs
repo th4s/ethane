@@ -6,13 +6,13 @@ use helper::*;
 
 #[test]
 fn test_txpool_status() {
-    let mut client = Client::ws();
+    let mut client = ClientWrapper::new_from_env();
     rpc_call_test_some(&mut client, rpc::txpool_status())
 }
 
 #[test]
 fn test_txpool_content() {
-    let mut client = Client::ws();
+    let mut client = ClientWrapper::new_from_env();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         to: Some(create_account(&mut client).1),
@@ -29,7 +29,7 @@ fn test_txpool_content() {
 
 #[test]
 fn test_txpool_inspect() {
-    let mut client = Client::ws();
+    let mut client = ClientWrapper::new_from_env();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         to: Some(create_account(&mut client).1),

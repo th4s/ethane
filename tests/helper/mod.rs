@@ -22,20 +22,20 @@ pub const FIX_ADDRESS: &str = "0xDc677f7C5060B0b441d30F361D0c8529Ac04E099";
 pub const KECCAK_HASH_OF_EMPTY_STRING: &str =
     "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 
-pub enum ClientTypeWrapper {
+pub enum ClientWrapper {
     Websocket(Client<WebSocket>),
     Http(Client<Http>),
 }
 
-impl ClientTypeWrapper {
-    pub fn new_from_env() -> ClientTypeWrapper {
-        match std::env::var("CON_TYPE")
-            .expect("Please specify env value CON_TYPE as either 'http' or 'ws'")
+impl ClientWrapper {
+    pub fn new_from_env() -> ClientWrapper {
+        match std::env::var("CONNECTION")
+            .expect("Please specify env value CONNECTION as either 'http' or 'ws'")
             .as_str()
         {
-            "http" => ClientTypeWrapper::Http(Client::http()),
-            "ws" => ClientTypeWrapper::Websocket(Client::ws()),
-            _ => panic!("Valid values for TEST_CONNECTION are either 'http' or 'ws'"),
+            "http" => ClientWrapper::Http(Client::http()),
+            "ws" => ClientWrapper::Websocket(Client::ws()),
+            _ => panic!("Please set environment variable 'CONNECTION'. Valid values are either 'http' or 'ws'"),
         }
     }
 
@@ -57,7 +57,7 @@ pub struct Client<T: JsonRequest> {
 }
 
 impl<T: JsonRequest> Client<T> {
-    pub fn call<U: DeserializeOwned + Debug + PartialEq>(
+    fn call<U: DeserializeOwned + Debug + PartialEq>(
         &mut self,
         rpc: Rpc<U>,
     ) -> Result<U, ConnectorError> {
@@ -66,7 +66,7 @@ impl<T: JsonRequest> Client<T> {
 }
 
 impl Client<WebSocket> {
-    pub fn ws() -> Self {
+    fn ws() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =
@@ -76,7 +76,7 @@ impl Client<WebSocket> {
 }
 
 impl Client<Http> {
-    pub fn http() -> Self {
+    fn http() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =
@@ -86,14 +86,14 @@ impl Client<Http> {
 }
 
 #[allow(dead_code)]
-pub struct Process {
+struct Process {
     cmd: Child,
     http_port: u16,
     ws_port: u16,
 }
 
 impl Process {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let (http_port, ws_port) = (
             port_scanner::request_open_port().expect("No port available"),
             port_scanner::request_open_port().expect("No port available"),
@@ -142,7 +142,7 @@ impl Drop for Process {
     }
 }
 
-pub fn wait_for_transaction<U: JsonRequest>(client: &mut Client<U>, tx_hash: H256) {
+pub fn wait_for_transaction(client: &mut ClientWrapper, tx_hash: H256) {
     loop {
         let transaction = client
             .call(rpc::eth_get_transaction_by_hash(tx_hash))
@@ -167,7 +167,7 @@ pub fn create_secret() -> H256 {
     H256::from_str(&secret).unwrap()
 }
 
-pub fn import_account<U: JsonRequest>(client: &mut Client<U>, secret: H256) -> H160 {
+pub fn import_account(client: &mut ClientWrapper, secret: H256) -> H160 {
     client
         .call(rpc::personal_import_raw_key(
             PrivateKey::NonPrefixed(secret),
@@ -176,7 +176,7 @@ pub fn import_account<U: JsonRequest>(client: &mut Client<U>, secret: H256) -> H
         .unwrap()
 }
 
-pub fn unlock_account<U: JsonRequest>(client: &mut Client<U>, address: H160) -> bool {
+pub fn unlock_account(client: &mut ClientWrapper, address: H160) -> bool {
     client
         .call(rpc::personal_unlock_account(
             address,
@@ -186,7 +186,7 @@ pub fn unlock_account<U: JsonRequest>(client: &mut Client<U>, address: H160) -> 
         .unwrap()
 }
 
-pub fn prefund_account<U: JsonRequest>(client: &mut Client<U>, address: H160) -> H256 {
+pub fn prefund_account(client: &mut ClientWrapper, address: H160) -> H256 {
     let coinbase = client.call(rpc::eth_coinbase()).unwrap();
     let tx = TransactionRequest {
         from: coinbase,
@@ -199,7 +199,7 @@ pub fn prefund_account<U: JsonRequest>(client: &mut Client<U>, address: H160) ->
     tx_hash
 }
 
-pub fn create_account<U: JsonRequest>(client: &mut Client<U>) -> (H256, H160) {
+pub fn create_account(client: &mut ClientWrapper) -> (H256, H160) {
     let secret = create_secret();
     let address = import_account(client, secret);
     unlock_account(client, address);
@@ -219,8 +219,8 @@ pub fn compile_contract(path: &Path, contract_name: &str) -> Value {
     output["contracts"][String::from(path_as_str) + ":" + contract_name].clone()
 }
 
-pub fn deploy_contract<U: JsonRequest>(
-    client: &mut Client<U>,
+pub fn deploy_contract(
+    client: &mut ClientWrapper,
     address: H160,
     path: &Path,
     contract_name: &str,
@@ -261,8 +261,8 @@ pub fn keccak(input: &[u8]) -> [u8; 32] {
     out
 }
 
-pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: JsonRequest>(
-    client: &mut Client<U>,
+pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq>(
+    client: &mut ClientWrapper,
     rpc: Rpc<T>,
     expected: T,
 ) {
@@ -275,8 +275,8 @@ pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq, U: Js
     }
 }
 
-pub fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq, U: JsonRequest>(
-    client: &mut Client<U>,
+pub fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq>(
+    client: &mut ClientWrapper,
     rpc: Rpc<T>,
 ) {
     match client.call(rpc) {
