@@ -4,6 +4,9 @@ use ethane::types::{TransactionRequest, U256};
 pub mod helper;
 use helper::*;
 
+pub mod fixtures;
+use fixtures::*;
+
 #[test]
 fn test_txpool_status() {
     let mut client = ClientWrapper::new_from_env();

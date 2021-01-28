@@ -5,6 +5,9 @@ use std::str::FromStr;
 pub mod helper;
 use helper::*;
 
+pub mod fixtures;
+use fixtures::*;
+
 #[test]
 fn test_personal_list_accounts() {
     let mut client = ClientWrapper::new_from_env();

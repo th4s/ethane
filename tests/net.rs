@@ -3,6 +3,9 @@ use ethane::rpc;
 pub mod helper;
 use helper::*;
 
+pub mod fixtures;
+use fixtures::*;
+
 #[test]
 fn test_net_version() {
     let mut client = ClientWrapper::new_from_env();

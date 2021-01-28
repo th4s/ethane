@@ -9,6 +9,9 @@ use std::str::FromStr;
 pub mod helper;
 use helper::*;
 
+pub mod fixtures;
+use fixtures::*;
+
 #[test]
 fn test_eth_protocol_version() {
     let mut client = ClientWrapper::new_from_env();

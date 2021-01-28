@@ -58,7 +58,7 @@ impl JsonRequest for Http {
 #[derive(Debug, Error)]
 pub enum HttpError {
     #[error("HttpError: {0}")]
-    Url(#[from] http::uri::InvalidUri),
+    Uri(#[from] http::uri::InvalidUri),
     #[error("HttpError: {0}")]
     Conversion(#[from] std::io::Error),
     #[error("HttpError: {0}")]
