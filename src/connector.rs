@@ -1,15 +1,19 @@
 use crate::rpc::Rpc;
 use crate::transport::http::{Http, HttpError};
 use crate::transport::websocket::{WebSocket, WebSocketError};
-use crate::transport::{Credentials, JsonRequest, TransportError};
+use crate::transport::{Credentials, Request, TransportError};
 use log::{debug, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::fmt::Debug;
+use std::sync::mpsc::Receiver;
 use thiserror::Error;
 
-pub struct Connector<T>(T, VecDeque<u32>);
+pub struct Connector<T> {
+    connection: T,
+    id_pool: VecDeque<usize>,
+}
 
 impl Connector<WebSocket> {
     pub fn websocket(
@@ -17,28 +21,29 @@ impl Connector<WebSocket> {
         credentials: Option<Credentials>,
     ) -> Result<Self, ConnectorError> {
         info!("Creating connector over websocket...");
-        Ok(Connector(
-            WebSocket::new(domain, credentials).map_err(ConnectorError::WsInit)?,
-            (0..1000).collect(),
-        ))
+        Ok(Connector {
+            connection: WebSocket::new(domain, credentials).map_err(ConnectorError::WsInit)?,
+            id_pool: (0..1000).collect(),
+        })
     }
 
     pub fn close(&mut self) -> Result<(), WebSocketError> {
-        self.0.close()
+        let close = self.connection.close()?;
+        Ok(close)
     }
 }
 
 impl Connector<Http> {
     pub fn http(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
         info!("Creating connector over http...");
-        Ok(Connector(
-            Http::new(domain, credentials).map_err(ConnectorError::HttpInit)?,
-            (0..1000).collect(),
-        ))
+        Ok(Connector {
+            connection: Http::new(domain, credentials).map_err(ConnectorError::from)?,
+            id_pool: (0..1000).collect(),
+        })
     }
 }
 
-impl<T: JsonRequest> Connector<T> {
+impl<T: Request> Connector<T> {
     pub fn call<U: DeserializeOwned + Debug>(
         &mut self,
         mut rpc: Rpc<U>,
@@ -47,30 +52,42 @@ impl<T: JsonRequest> Connector<T> {
         rpc.id = command_id;
         debug!("Calling rpc method: {:?}", &rpc);
         let response = self.send_request(&rpc)?;
-        self.1.push_back(command_id);
+        self.id_pool.push_back(command_id);
         deserialize(&response)
     }
 
-    fn get_command_id(&mut self) -> Result<u32, ConnectorError> {
-        match self.1.pop_front() {
+    // pub fn subscribe<U: DeserializeOwned + Debug>(
+    //     &mut self,
+    //     mut rpc: Rpc<U>,
+    // ) -> Result<&Receiver<U>, ConnectorError> {
+    //     let command_id = self.get_command_id()?;
+    //     rpc.id = command_id;
+    //     debug!("Calling rpc method: {:?}", &rpc);
+    //     let response = self.send_request(&rpc)?;
+    // }
+
+    fn send_request<U: DeserializeOwned + Debug>(
+        &mut self,
+        rpc: &Rpc<U>,
+    ) -> Result<String, ConnectorError> {
+        let response = self.connection.request(serde_json::to_string(rpc)?)?;
+
+        if !response.contains(&format!("\"id\":{}", rpc.id)) {
+            return Err(ConnectorError::WrongId);
+        }
+        Ok(response)
+    }
+}
+
+impl<T> Connector<T> {
+    fn get_command_id(&mut self) -> Result<usize, ConnectorError> {
+        match self.id_pool.pop_front() {
             Some(inner) => {
                 trace!("Using id {} for request", inner);
                 Ok(inner)
             }
             None => Err(ConnectorError::NoTicketId),
         }
-    }
-
-    fn send_request<U: DeserializeOwned + Debug>(
-        &mut self,
-        rpc: &Rpc<U>,
-    ) -> Result<String, ConnectorError> {
-        let response = self.0.json_request(serde_json::to_string(rpc)?)?;
-
-        if !response.contains(&format!("\"id\":{}", rpc.id)) {
-            return Err(ConnectorError::WrongId);
-        }
-        Ok(response)
     }
 }
 
@@ -82,13 +99,14 @@ fn deserialize<U: DeserializeOwned + Debug>(response: &str) -> Result<U, Connect
             ..
         }) => match inner {
             RpcResult::Result(result) => Ok(result),
-            RpcResult::Error(err) => Err(ConnectorError::JsonRpc(err)),
+            RpcResult::Error(err) => Err(ConnectorError::from(err)),
         },
         Err(err) => Err(ConnectorError::from(err)),
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Error)]
+#[error("{message}")]
 pub struct JsonError {
     code: i32,
     message: String,
@@ -99,15 +117,17 @@ pub enum ConnectorError {
     #[error("Connector Error: {0}")]
     WsInit(WebSocketError),
     #[error("Connector Error: {0}")]
-    HttpInit(HttpError),
+    WsClose(WebSocketError),
+    #[error("Connector Error: {0}")]
+    HttpInit(#[from] HttpError),
     #[error("Connector Error: Maximum number of connections reached")]
     NoTicketId,
+    #[error("Connector Error: {0}")]
+    Transport(#[from] TransportError),
     #[error("Connector Error: {0:?}")]
-    JsonRpc(JsonError),
+    JsonRpc(#[from] JsonError),
     #[error("Connector Error: {0}")]
     Serde(#[from] serde_json::Error),
-    #[error("Connector Error: {0}")]
-    TransportError(#[from] TransportError),
     #[error("Connector Error: Received an unexpected message id")]
     WrongId,
 }

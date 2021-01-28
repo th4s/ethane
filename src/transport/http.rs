@@ -1,10 +1,10 @@
 use super::Credentials;
-use crate::transport::{JsonRequest, TransportError};
+use crate::transport::{Request, TransportError};
 use http::Uri;
 use log::{debug, trace};
 use std::str::FromStr;
 use thiserror::Error;
-use ureq::{Agent, Error as UreqError, Request};
+use ureq::{Agent, Error as UreqError, Request as UreqRequest};
 
 pub struct Http {
     agent: Agent,
@@ -22,7 +22,7 @@ impl Http {
         })
     }
 
-    fn prepare_request(&self, method: &str, path: Option<&str>) -> Request {
+    fn prepare_request(&self, method: &str, path: Option<&str>) -> UreqRequest {
         let mut uri = self.uri.to_string();
         if let Some(path) = path {
             uri.push_str(path);
@@ -39,8 +39,8 @@ impl Http {
     }
 }
 
-impl JsonRequest for Http {
-    fn json_request(&mut self, cmd: String) -> Result<String, TransportError> {
+impl Request for Http {
+    fn request(&mut self, cmd: String) -> Result<String, TransportError> {
         let mut request = self.prepare_request("POST", None);
         request = request.set("Content-Type", "application/json");
         trace!("Sending request {:?} with body {}", &request, &cmd);

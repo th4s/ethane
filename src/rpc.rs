@@ -23,7 +23,7 @@ pub struct Rpc<T: DeserializeOwned + Debug> {
     pub json_rpc: &'static str,
     pub method: String,
     pub params: Vec<Value>,
-    pub id: u32,
+    pub id: usize,
     #[serde(skip_serializing)]
     result: PhantomData<T>,
 }

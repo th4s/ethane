@@ -2,7 +2,7 @@ use ethane::connector::{Connector, ConnectorError};
 use ethane::rpc::Rpc;
 use ethane::transport::http::Http;
 use ethane::transport::websocket::WebSocket;
-use ethane::transport::JsonRequest;
+use ethane::transport::Request;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::process::{Child, Command};
@@ -36,12 +36,12 @@ impl ClientWrapper {
 }
 
 #[allow(dead_code)]
-pub struct Client<T: JsonRequest> {
+pub struct Client<T: Request> {
     connector: Connector<T>,
     process: Process,
 }
 
-impl<T: JsonRequest> Client<T> {
+impl<T: Request> Client<T> {
     fn call<U: DeserializeOwned + Debug + PartialEq>(
         &mut self,
         rpc: Rpc<U>,

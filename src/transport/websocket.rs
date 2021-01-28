@@ -1,5 +1,5 @@
 use super::Credentials;
-use super::{JsonRequest, TransportError};
+use super::{Request, TransportError};
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
 use std::borrow::Cow;
@@ -28,18 +28,6 @@ impl WebSocket {
         Ok(WebSocket(ws.0))
     }
 
-    pub(crate) fn read(&mut self) -> Result<Message, WebSocketError> {
-        let message = self.0.read_message()?;
-        trace!("Reading from websocket: {}", &message);
-        Ok(message)
-    }
-
-    pub(crate) fn write_text(&mut self, message: String) -> Result<(), WebSocketError> {
-        trace!("Writing to websocket: {}", message);
-        self.0.write_message(Message::Text(message))?;
-        Ok(())
-    }
-
     pub(crate) fn close(&mut self) -> Result<(), WebSocketError> {
         debug!("Closing websocket connection");
         let close_frame = CloseFrame {
@@ -49,16 +37,33 @@ impl WebSocket {
         self.0.close(Some(close_frame))?;
         self.0.write_pending().map_err(WebSocketError::from)
     }
-}
 
-impl JsonRequest for WebSocket {
-    fn json_request(&mut self, cmd: String) -> Result<String, TransportError> {
-        let _write = self.write_text(cmd)?;
+    pub(crate) fn read(&mut self) -> Result<Message, WebSocketError> {
+        let message = self.0.read_message()?;
+        trace!("Reading from websocket: {}", &message);
+        Ok(message)
+    }
+
+    pub(crate) fn write(&mut self, message: Message) -> Result<(), WebSocketError> {
+        trace!("Writing to websocket: {}", message);
+        self.0.write_message(message)?;
+        Ok(())
+    }
+
+    fn request_str(&mut self, cmd: String) -> Result<String, WebSocketError> {
+        let _write = self.write(Message::Text(cmd))?;
         match self.read() {
             Ok(Message::Text(reply)) => Ok(reply),
-            Ok(_) => Err(WebSocketError::NonTextResponse.into()),
-            Err(err) => Err(err.into()),
+            Ok(_) => Err(WebSocketError::NonTextResponse),
+            Err(err) => Err(err),
         }
+    }
+}
+
+impl Request for WebSocket {
+    fn request(&mut self, cmd: String) -> Result<String, TransportError> {
+        let response = self.request_str(cmd)?;
+        Ok(response)
     }
 }
 
@@ -171,7 +176,9 @@ mod tests {
     fn test_new() {
         spawn_websocket_server(ping_pong, 3001);
         let mut ws_client = WebSocket::new("ws://localhost:3001", None).unwrap();
-        ws_client.write_text(String::from("Ping")).unwrap();
+        ws_client
+            .write(Message::Text(String::from("Ping")))
+            .unwrap();
         match ws_client.read() {
             Ok(Message::Text(text)) => assert_eq!(text, "Ping Pong"),
             _ => assert!(false),
