@@ -7,7 +7,6 @@ use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::fmt::Debug;
-use std::sync::mpsc::Receiver;
 use thiserror::Error;
 
 pub struct Connector<T> {
@@ -27,9 +26,8 @@ impl Connector<WebSocket> {
         })
     }
 
-    pub fn close(&mut self) -> Result<(), WebSocketError> {
-        let close = self.connection.close()?;
-        Ok(close)
+    pub fn close(&mut self) -> Result<(), ConnectorError> {
+        self.connection.close().map_err(ConnectorError::WsClose)
     }
 }
 
@@ -51,31 +49,9 @@ impl<T: Request> Connector<T> {
         let command_id = self.get_command_id()?;
         rpc.id = command_id;
         debug!("Calling rpc method: {:?}", &rpc);
-        let response = self.send_request(&rpc)?;
+        let response = self.connection.request(serde_json::to_string(&rpc)?)?;
         self.id_pool.push_back(command_id);
         deserialize(&response)
-    }
-
-    // pub fn subscribe<U: DeserializeOwned + Debug>(
-    //     &mut self,
-    //     mut rpc: Rpc<U>,
-    // ) -> Result<&Receiver<U>, ConnectorError> {
-    //     let command_id = self.get_command_id()?;
-    //     rpc.id = command_id;
-    //     debug!("Calling rpc method: {:?}", &rpc);
-    //     let response = self.send_request(&rpc)?;
-    // }
-
-    fn send_request<U: DeserializeOwned + Debug>(
-        &mut self,
-        rpc: &Rpc<U>,
-    ) -> Result<String, ConnectorError> {
-        let response = self.connection.request(serde_json::to_string(rpc)?)?;
-
-        if !response.contains(&format!("\"id\":{}", rpc.id)) {
-            return Err(ConnectorError::WrongId);
-        }
-        Ok(response)
     }
 }
 
@@ -134,7 +110,6 @@ pub enum ConnectorError {
 
 #[derive(Deserialize, Debug)]
 struct Response<T> {
-    pub id: u32,
     #[serde(rename = "jsonrpc")]
     pub json_rpc: String,
     #[serde(flatten)]

@@ -55,6 +55,7 @@ impl Request for Http {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum HttpError {
     #[error("HttpError: {0}")]

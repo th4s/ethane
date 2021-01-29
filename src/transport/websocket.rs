@@ -1,8 +1,11 @@
 use super::Credentials;
 use super::{Request, TransportError};
+use ethereum_types::U128;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
+use serde::Deserialize;
 use std::borrow::Cow;
+use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use thiserror::Error;
 use tungstenite::client::AutoStream;
@@ -11,7 +14,10 @@ use tungstenite::protocol::CloseFrame;
 use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungstenite};
 
 /// Convenience wrapper over a [websocket](tungstenite::WebSocket) connection of the [tungstenite crate](tungstenite)
-pub struct WebSocket(WebSocketTungstenite<AutoStream>);
+pub struct WebSocket {
+    ws: WebSocketTungstenite<AutoStream>,
+    subscriptions: HashMap<U128, VecDeque<String>>,
+}
 
 impl WebSocket {
     /// Create a new websocket connection to the specified Uri.
@@ -25,7 +31,10 @@ impl WebSocket {
         let handshake_request = create_handshake_request(&uri, credentials)?;
         let ws = ws_connect(handshake_request)?;
         trace!("Handshake Response: {:?}", ws.1);
-        Ok(WebSocket(ws.0))
+        Ok(WebSocket {
+            ws: ws.0,
+            subscriptions: HashMap::new(),
+        })
     }
 
     pub(crate) fn close(&mut self) -> Result<(), WebSocketError> {
@@ -34,26 +43,37 @@ impl WebSocket {
             code: CloseCode::Normal,
             reason: Cow::from("Finished"),
         };
-        self.0.close(Some(close_frame))?;
-        self.0.write_pending().map_err(WebSocketError::from)
+        self.ws.close(Some(close_frame))?;
+        self.ws.write_pending().map_err(WebSocketError::from)
     }
 
-    pub(crate) fn read(&mut self) -> Result<Message, WebSocketError> {
-        let message = self.0.read_message()?;
+    fn read(&mut self) -> Result<Message, WebSocketError> {
+        let message = self.ws.read_message()?;
         trace!("Reading from websocket: {}", &message);
         Ok(message)
     }
 
-    pub(crate) fn write(&mut self, message: Message) -> Result<(), WebSocketError> {
+    fn write(&mut self, message: Message) -> Result<(), WebSocketError> {
         trace!("Writing to websocket: {}", message);
-        self.0.write_message(message)?;
+        self.ws.write_message(message)?;
         Ok(())
     }
 
-    fn request_str(&mut self, cmd: String) -> Result<String, WebSocketError> {
-        let _write = self.write(Message::Text(cmd))?;
+    fn distribute_responses(&mut self) -> Result<Option<String>, WebSocketError> {
         match self.read() {
-            Ok(Message::Text(reply)) => Ok(reply),
+            Ok(Message::Text(response)) => {
+                let response_id = serde_json::from_str::<ResponseMatcher>(&response)?;
+                match response_id.id_or_sub {
+                    IdOrSub::Params(params) => {
+                        self.subscriptions
+                            .entry(params.subscription)
+                            .or_insert(VecDeque::new())
+                            .push_back(response);
+                        Ok(None)
+                    }
+                    IdOrSub::Id(_) => Ok(Some(response)),
+                }
+            }
             Ok(_) => Err(WebSocketError::NonTextResponse),
             Err(err) => Err(err),
         }
@@ -62,8 +82,14 @@ impl WebSocket {
 
 impl Request for WebSocket {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
-        let response = self.request_str(cmd)?;
-        Ok(response)
+        let _write = self.write(Message::Text(cmd))?;
+        let response = loop {
+            let response = self.distribute_responses()?;
+            if let Some(inner) = response {
+                break Ok(inner);
+            }
+        };
+        response
     }
 }
 
@@ -84,14 +110,31 @@ fn create_handshake_request(
     if let Some(credentials) = credentials {
         let auth_string_base64 = String::from("Basic ")
             + &base64::encode(credentials.username + ":" + &credentials.password);
-        let headers = req_builder
-            .headers_mut()
-            .ok_or(WebSocketError::HandshakeError)?;
+        let headers = req_builder.headers_mut().ok_or(WebSocketError::Handshake)?;
         headers.insert("Authorization", auth_string_base64.parse()?);
     }
     let request = req_builder.body(())?;
     trace!("Built websocket handshake request: {:?}", &request);
     Ok(request)
+}
+
+#[derive(Deserialize, Debug)]
+struct ResponseMatcher {
+    #[serde(flatten)]
+    id_or_sub: IdOrSub,
+}
+
+#[derive(Deserialize, Debug)]
+enum IdOrSub {
+    #[serde(rename = "id")]
+    Id(usize),
+    #[serde(rename = "params")]
+    Params(Params),
+}
+
+#[derive(Deserialize, Debug)]
+struct Params {
+    subscription: U128,
 }
 
 /// Collect all kinds of possible websocket errors
@@ -104,8 +147,10 @@ pub enum WebSocketError {
     #[error("WebSocketError: {0}")]
     Url(#[from] http::uri::InvalidUri),
     #[error("WebSocketError: HandshakeError")]
-    HandshakeError,
-    #[error("WebSocketError: Expected text response, but received other")]
+    Handshake,
+    #[error("WebSocketError: Id conversion failed")]
+    IdConversion(#[from] serde_json::Error),
+    #[error("WebSocketError: Id not found in response")]
     NonTextResponse,
     #[error("WebSocketError: {0}")]
     InvalidHeader(#[from] http::header::InvalidHeaderValue),
