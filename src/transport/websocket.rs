@@ -15,8 +15,8 @@ use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungsten
 
 /// Convenience wrapper over a [websocket](tungstenite::WebSocket) connection of the [tungstenite crate](tungstenite)
 pub struct WebSocket {
+    pub(crate) subscriptions: HashMap<U128, VecDeque<String>>,
     ws: WebSocketTungstenite<AutoStream>,
-    subscriptions: HashMap<U128, VecDeque<String>>,
 }
 
 impl WebSocket {
@@ -67,7 +67,7 @@ impl WebSocket {
                     IdOrSub::Params(params) => {
                         self.subscriptions
                             .entry(params.subscription)
-                            .or_insert(VecDeque::new())
+                            .or_insert_with(|| VecDeque::new())
                             .push_back(response);
                         Ok(None)
                     }

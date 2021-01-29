@@ -14,6 +14,7 @@ pub struct Credentials {
     pub password: String,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum TransportError {
     #[error("{0}")]

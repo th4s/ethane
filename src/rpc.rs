@@ -8,12 +8,14 @@ use std::marker::PhantomData;
 pub use eth::*;
 pub use net::*;
 pub use personal::*;
+pub use sub::*;
 pub use txpool::*;
 pub use web3::*;
 
 mod eth;
 mod net;
 mod personal;
+mod sub;
 mod txpool;
 mod web3;
 
@@ -25,7 +27,7 @@ pub struct Rpc<T: DeserializeOwned + Debug> {
     pub params: Vec<Value>,
     pub id: usize,
     #[serde(skip_serializing)]
-    result: PhantomData<T>,
+    result_type: PhantomData<T>,
 }
 
 impl<T: DeserializeOwned + Debug> Rpc<T> {
@@ -37,7 +39,7 @@ impl<T: DeserializeOwned + Debug> Rpc<T> {
             method: String::from(method),
             params: Vec::new(),
             id: Default::default(),
-            result: PhantomData,
+            result_type: PhantomData,
         }
     }
 
