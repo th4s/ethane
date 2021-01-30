@@ -62,12 +62,12 @@ impl WebSocket {
     fn distribute_responses(&mut self) -> Result<Option<String>, WebSocketError> {
         match self.read() {
             Ok(Message::Text(response)) => {
-                let response_id = serde_json::from_str::<ResponseMatcher>(&response)?;
+                let response_id = serde_json::from_str::<IdMatcher>(&response)?;
                 match response_id.id_or_sub {
                     IdOrSub::Params(params) => {
                         self.subscriptions
                             .entry(params.subscription)
-                            .or_insert_with(|| VecDeque::new())
+                            .or_insert_with(VecDeque::new)
                             .push_back(response);
                         Ok(None)
                     }
@@ -83,13 +83,12 @@ impl WebSocket {
 impl Request for WebSocket {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
         let _write = self.write(Message::Text(cmd))?;
-        let response = loop {
+        loop {
             let response = self.distribute_responses()?;
             if let Some(inner) = response {
                 break Ok(inner);
             }
-        };
-        response
+        }
     }
 }
 
@@ -118,13 +117,13 @@ fn create_handshake_request(
     Ok(request)
 }
 
-#[derive(Deserialize, Debug)]
-struct ResponseMatcher {
+#[derive(Copy, Clone, Deserialize, Debug)]
+struct IdMatcher {
     #[serde(flatten)]
     id_or_sub: IdOrSub,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 enum IdOrSub {
     #[serde(rename = "id")]
     Id(usize),
@@ -132,7 +131,7 @@ enum IdOrSub {
     Params(Params),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 struct Params {
     subscription: U128,
 }

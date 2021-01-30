@@ -160,8 +160,6 @@ pub enum ConnectorError {
     JsonRpc(#[from] JsonError),
     #[error("Connector Error: {0}")]
     Serde(#[from] serde_json::Error),
-    #[error("Connector Error: Received an unexpected message id")]
-    WrongId,
     #[error("Connector Error: No channel found for ticket id")]
     NoChannel,
     #[error("Connector Error: Channel is empty")]

@@ -79,8 +79,12 @@ struct Process {
 impl Process {
     fn new() -> Self {
         let (http_port, ws_port) = (
-            port_scanner::request_open_port().expect("No port available"),
-            port_scanner::request_open_port().expect("No port available"),
+            port_scanner::request_open_port()
+                .expect("No port available")
+                .to_string(),
+            port_scanner::request_open_port()
+                .expect("No port available")
+                .to_string(),
         );
         let cmd = Command::new("geth")
             .args(&[
@@ -89,7 +93,7 @@ impl Process {
                 "--ws.api",
                 "personal,eth,net,web3,txpool",
                 "--ws.port",
-                &ws_port.to_string(),
+                &ws_port,
                 "--http",
                 "--http.api",
                 "personal,eth,net,web3,txpool",
