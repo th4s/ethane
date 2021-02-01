@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_new() {
         spawn_websocket_server(ping_pong, 3001);
-        let mut ws_client = WebSocket::new("ws://localhost:3001", None).unwrap();
+        let mut ws_client = WebSocket::new(String::from("ws://localhost:3001"), None).unwrap();
         ws_client
             .write(Message::Text(String::from("Ping")))
             .unwrap();

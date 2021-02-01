@@ -1,34 +1,32 @@
 use super::Credentials;
 use crate::transport::{Request, TransportError};
-use http::Uri;
 use log::{debug, trace};
-use std::str::FromStr;
 use thiserror::Error;
 use ureq::{Agent, Error as UreqError, Request as UreqRequest};
 
 pub struct Http {
     agent: Agent,
-    uri: Uri,
+    domain: String,
     credentials: Option<Credentials>,
 }
 
 impl Http {
-    pub(crate) fn new(domain: &str, credentials: Option<Credentials>) -> Result<Self, HttpError> {
+    pub(crate) fn new(domain: String, credentials: Option<Credentials>) -> Result<Self, HttpError> {
         debug!("Creating http client to {}", domain);
         Ok(Http {
             agent: Agent::new(),
-            uri: Uri::from_str(domain)?,
+            domain,
             credentials,
         })
     }
 
     fn prepare_request(&self, method: &str, path: Option<&str>) -> UreqRequest {
-        let mut uri = self.uri.to_string();
+        let mut domain = self.domain.clone();
         if let Some(path) = path {
-            uri.push_str(path);
+            domain.push_str(path);
         }
 
-        let mut request = self.agent.request(method, &uri);
+        let mut request = self.agent.request(method, &domain);
 
         if let Some(credentials) = self.credentials.clone() {
             let auth_string_base64 = String::from("Basic ")

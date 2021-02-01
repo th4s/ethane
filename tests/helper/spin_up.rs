@@ -55,7 +55,7 @@ impl Client<WebSocket> {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =
-            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
+            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), &None).unwrap();
         Client { connector, process }
     }
 }
@@ -65,7 +65,7 @@ impl Client<Http> {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =
-            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), None).unwrap();
+            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), &None).unwrap();
         Client { connector, process }
     }
 }

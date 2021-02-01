@@ -19,10 +19,11 @@ pub struct Connector<T> {
 }
 
 impl Connector<Http> {
-    pub fn http(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
+    pub fn http(domain: &str, credentials: &Option<Credentials>) -> Result<Self, ConnectorError> {
         info!("Creating connector over http...");
         Ok(Connector {
-            connection: Http::new(domain, credentials).map_err(ConnectorError::from)?,
+            connection: Http::new(String::from(domain), credentials.clone())
+                .map_err(ConnectorError::from)?,
             id_pool: (0..1000).collect(),
         })
     }
