@@ -16,7 +16,7 @@ pub struct Subscription<T: DeserializeOwned + Debug> {
 }
 
 impl<T: DeserializeOwned + Debug> Subscription<T> {
-    pub fn next(&mut self) -> Result<T, SubscriptionError> {
+    pub fn next_item(&mut self) -> Result<T, SubscriptionError> {
         trace!("Fetching next object from subscription");
         let response = self.connector.connection.read_message()?;
         deserialize_from_sub(&response)

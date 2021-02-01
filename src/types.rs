@@ -221,6 +221,35 @@ pub struct Block {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct BlockHeader {
+    pub number: Option<U64>,
+    pub hash: Option<H256>,
+    #[serde(rename = "parentHash")]
+    pub parent_hash: H256,
+    pub nonce: Option<H64>,
+    #[serde(rename = "transactionsRoot")]
+    pub transactions_root: H256,
+    #[serde(rename = "stateRoot")]
+    pub state_root: H256,
+    #[serde(rename = "receiptsRoot")]
+    pub receipts_root: H256,
+    pub difficulty: U256,
+    #[serde(rename = "sha3Uncles")]
+    pub sha3_uncles: H256,
+    pub miner: H160,
+    #[serde(rename = "logsBloom")]
+    pub logs_bloom: Option<Bloom>,
+    #[serde(rename = "gasLimit")]
+    pub gas_limit: U256,
+    #[serde(rename = "gasUsed")]
+    pub gas_used: U256,
+    #[serde(rename = "extraData")]
+    pub extra_data: Bytes,
+    #[serde(rename = "mixHash")]
+    pub mix_hash: Option<H256>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum TransactionOrHash {
     Transaction(Transaction),
@@ -305,4 +334,31 @@ pub struct TxPoolContent {
 pub struct TxPoolInspect {
     pub pending: HashMap<H160, HashMap<String, String>>,
     pub queued: HashMap<H160, HashMap<String, String>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum SyncInfo {
+    pub Syncing(SyncStatus),
+    pub NotSyncing(bool),
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct SyncInfoSub {
+    pub syncing: bool,
+    pub status: Option<SyncStatus>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct SyncStatus {
+    #[serde(rename = "startingBlock")]
+    pub starting_block: u64,
+    #[serde(rename = "currentBlock")]
+    pub current_block: u64,
+    #[serde(rename = "highestBlock")]
+    pub highest_block: u64,
+    #[serde(rename = "pulledStates")]
+    pub pulled_states: Option<u64>,
+    #[serde(rename = "knownStates")]
+    pub known_states: Option<u64>,
 }

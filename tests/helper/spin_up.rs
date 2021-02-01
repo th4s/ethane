@@ -1,5 +1,5 @@
-use ethane::connector::{Connector, ConnectorError};
-use ethane::rpc::Rpc;
+use ethane::connector::{Connector, ConnectorError, Subscription};
+use ethane::rpc::{Rpc, SubscriptionRequest};
 use ethane::transport::http::Http;
 use ethane::transport::websocket::WebSocket;
 use ethane::transport::Request;
@@ -33,6 +33,16 @@ impl ClientWrapper {
             Self::Http(client) => client.call(rpc),
         }
     }
+
+    pub fn subscribe<U: DeserializeOwned + Debug>(
+        &mut self,
+        sub_request: SubscriptionRequest<U>,
+    ) -> Result<Subscription<U>, ConnectorError> {
+        match self {
+            Self::Websocket(client) => client.subscribe(sub_request),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -51,7 +61,16 @@ impl<T: Request> Client<T> {
 }
 
 impl Client<WebSocket> {
-    fn ws() -> Self {
+    pub fn subscribe<U: DeserializeOwned + Debug>(
+        &mut self,
+        sub_request: SubscriptionRequest<U>,
+    ) -> Result<Subscription<U>, ConnectorError> {
+        self.connector.subscribe(sub_request)
+    }
+}
+
+impl Client<WebSocket> {
+    pub fn ws() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =
@@ -61,7 +80,7 @@ impl Client<WebSocket> {
 }
 
 impl Client<Http> {
-    fn http() -> Self {
+    pub fn http() -> Self {
         let process = Process::new();
         std::thread::sleep(std::time::Duration::from_secs(5));
         let connector =

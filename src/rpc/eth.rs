@@ -1,6 +1,6 @@
 use super::Rpc;
 use crate::types::{
-    Block, BlockParameter, Bytes, Call, Filter, GasCall, HashOrLog, Transaction,
+    Block, BlockParameter, Bytes, Call, Filter, GasCall, HashOrLog, SyncInfo, Transaction,
     TransactionReceipt, TransactionRequest, H160, H256, H64, U128, U256, U64,
 };
 
@@ -8,7 +8,7 @@ pub fn eth_protocol_version() -> Rpc<String> {
     Rpc::new("eth_protocolVersion")
 }
 
-pub fn eth_syncing() -> Rpc<bool> {
+pub fn eth_syncing() -> Rpc<SyncInfo> {
     Rpc::new("eth_syncing")
 }
 

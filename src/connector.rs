@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 use thiserror::Error;
 
 mod subscription;
-use subscription::Subscription;
+pub use subscription::Subscription;
 
 pub struct Connector<T> {
     connection: T,

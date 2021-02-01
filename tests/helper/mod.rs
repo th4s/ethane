@@ -11,7 +11,7 @@ use std::str::FromStr;
 use tiny_keccak::{Hasher, Keccak};
 
 mod spin_up;
-pub use spin_up::ClientWrapper;
+pub use spin_up::{Client, ClientWrapper};
 
 use crate::ACCOUNTS_PASSWORD;
 
