@@ -1,11 +1,8 @@
 use super::Credentials;
 use super::{Request, TransportError};
-use ethereum_types::U128;
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
-use serde::Deserialize;
 use std::borrow::Cow;
-use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
 use thiserror::Error;
 use tungstenite::client::AutoStream;
@@ -15,7 +12,8 @@ use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungsten
 
 /// Convenience wrapper over a [websocket](tungstenite::WebSocket) connection of the [tungstenite crate](tungstenite)
 pub struct WebSocket {
-    pub(crate) subscriptions: HashMap<U128, VecDeque<String>>,
+    pub(crate) domain: String,
+    pub(crate) credentials: Option<Credentials>,
     ws: WebSocketTungstenite<AutoStream>,
 }
 
@@ -23,17 +21,18 @@ impl WebSocket {
     /// Create a new websocket connection to the specified Uri.
     /// When used with [credentials](Credentials), will try to attempt HTTP basic authentication for the handshake request.
     pub(crate) fn new(
-        domain: &str,
+        domain: String,
         credentials: Option<Credentials>,
     ) -> Result<WebSocket, WebSocketError> {
         debug!("Initiating websocket connection to {}", domain);
-        let uri = Uri::from_str(domain)?;
-        let handshake_request = create_handshake_request(&uri, credentials)?;
+        let uri = Uri::from_str(&domain)?;
+        let handshake_request = create_handshake_request(&uri, credentials.clone())?;
         let ws = ws_connect(handshake_request)?;
         trace!("Handshake Response: {:?}", ws.1);
         Ok(WebSocket {
+            domain,
+            credentials,
             ws: ws.0,
-            subscriptions: HashMap::new(),
         })
     }
 
@@ -47,6 +46,14 @@ impl WebSocket {
         self.ws.write_pending().map_err(WebSocketError::from)
     }
 
+    pub(crate) fn read_message(&mut self) -> Result<String, WebSocketError> {
+        match self.read() {
+            Ok(Message::Text(response)) => Ok(response),
+            Ok(_) => Err(WebSocketError::NonTextResponse),
+            Err(err) => Err(err),
+        }
+    }
+
     fn read(&mut self) -> Result<Message, WebSocketError> {
         let message = self.ws.read_message()?;
         trace!("Reading from websocket: {}", &message);
@@ -58,37 +65,12 @@ impl WebSocket {
         self.ws.write_message(message)?;
         Ok(())
     }
-
-    fn distribute_responses(&mut self) -> Result<Option<String>, WebSocketError> {
-        match self.read() {
-            Ok(Message::Text(response)) => {
-                let response_id = serde_json::from_str::<IdMatcher>(&response)?;
-                match response_id.id_or_sub {
-                    IdOrSub::Params(params) => {
-                        self.subscriptions
-                            .entry(params.subscription)
-                            .or_insert_with(VecDeque::new)
-                            .push_back(response);
-                        Ok(None)
-                    }
-                    IdOrSub::Id(_) => Ok(Some(response)),
-                }
-            }
-            Ok(_) => Err(WebSocketError::NonTextResponse),
-            Err(err) => Err(err),
-        }
-    }
 }
 
 impl Request for WebSocket {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
         let _write = self.write(Message::Text(cmd))?;
-        loop {
-            let response = self.distribute_responses()?;
-            if let Some(inner) = response {
-                break Ok(inner);
-            }
-        }
+        self.read_message().map_err(TransportError::from)
     }
 }
 
@@ -117,25 +99,6 @@ fn create_handshake_request(
     Ok(request)
 }
 
-#[derive(Copy, Clone, Deserialize, Debug)]
-struct IdMatcher {
-    #[serde(flatten)]
-    id_or_sub: IdOrSub,
-}
-
-#[derive(Copy, Clone, Deserialize, Debug)]
-enum IdOrSub {
-    #[serde(rename = "id")]
-    Id(usize),
-    #[serde(rename = "params")]
-    Params(Params),
-}
-
-#[derive(Copy, Clone, Deserialize, Debug)]
-struct Params {
-    subscription: U128,
-}
-
 /// Collect all kinds of possible websocket errors
 #[derive(Debug, Error)]
 pub enum WebSocketError {
@@ -147,9 +110,7 @@ pub enum WebSocketError {
     Url(#[from] http::uri::InvalidUri),
     #[error("WebSocketError: HandshakeError")]
     Handshake,
-    #[error("WebSocketError: Id conversion failed")]
-    IdConversion(#[from] serde_json::Error),
-    #[error("WebSocketError: Id not found in response")]
+    #[error("WebSocketError: Found non-text response")]
     NonTextResponse,
     #[error("WebSocketError: {0}")]
     InvalidHeader(#[from] http::header::InvalidHeaderValue),

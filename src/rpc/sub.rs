@@ -2,25 +2,31 @@ use super::Rpc;
 use crate::types::{Block, H256, U128};
 use std::marker::PhantomData;
 
-pub struct SubRequest<T> {
-    pub rpc: Rpc<U128>,
-    pub result_type: PhantomData<T>,
+pub struct SubscriptionRequest<T> {
+    pub(crate) rpc: Rpc<U128>,
+    result_type: PhantomData<T>,
 }
 
-pub fn eth_subscribe_new_heads() -> SubRequest<Block> {
+pub fn eth_subscribe_new_heads() -> SubscriptionRequest<Block> {
     let mut rpc = Rpc::new("eth_subscribe");
     rpc.add_param("newHeads");
-    SubRequest {
+    SubscriptionRequest {
         rpc,
         result_type: PhantomData,
     }
 }
 
-pub fn eth_subscribe_new_pending_transactions() -> SubRequest<H256> {
+pub fn eth_subscribe_new_pending_transactions() -> SubscriptionRequest<H256> {
     let mut rpc = Rpc::new("eth_subscribe");
     rpc.add_param("newPendingTransactions");
-    SubRequest {
+    SubscriptionRequest {
         rpc,
         result_type: PhantomData,
     }
+}
+
+pub fn eth_unsubscribe(sub_id: U128) -> Rpc<bool> {
+    let mut rpc = Rpc::new("eth_unsubscribe");
+    rpc.add_param(sub_id);
+    rpc
 }

@@ -1,68 +1,21 @@
-use crate::rpc::{Rpc, SubRequest};
+use crate::rpc::{Rpc, SubscriptionRequest};
 use crate::transport::http::{Http, HttpError};
 use crate::transport::websocket::{WebSocket, WebSocketError};
 use crate::transport::{Credentials, Request, TransportError};
-use crate::types::U128;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use serde_json::Value;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use thiserror::Error;
 
+mod subscription;
+use subscription::Subscription;
+
 pub struct Connector<T> {
     connection: T,
     id_pool: VecDeque<usize>,
-}
-
-pub struct Ticket<T: DeserializeOwned + Debug> {
-    id: U128,
-    result_type: PhantomData<T>,
-}
-
-impl Connector<WebSocket> {
-    pub fn websocket(
-        domain: &str,
-        credentials: Option<Credentials>,
-    ) -> Result<Self, ConnectorError> {
-        info!("Creating connector over websocket...");
-        Ok(Connector {
-            connection: WebSocket::new(domain, credentials).map_err(ConnectorError::WsInit)?,
-            id_pool: (0..1000).collect(),
-        })
-    }
-
-    pub fn subscribe<U: DeserializeOwned + Debug>(
-        &mut self,
-        sub_request: SubRequest<U>,
-    ) -> Result<Ticket<U>, ConnectorError> {
-        let subscription_id = self.call(sub_request.rpc)?;
-        Ok(Ticket {
-            id: subscription_id,
-            result_type: PhantomData,
-        })
-    }
-
-    pub fn pop_from_channel<U: DeserializeOwned + Debug>(
-        &mut self,
-        ticket: &Ticket<U>,
-    ) -> Result<U, ConnectorError> {
-        if let Some(queue) = self.connection.subscriptions.get_mut(&ticket.id) {
-            if let Some(element) = queue.pop_front() {
-                deserialize_from_sub(&element)
-            } else {
-                Err(ConnectorError::EmptyChannel)
-            }
-        } else {
-            Err(ConnectorError::NoChannel)
-        }
-    }
-
-    pub fn close(&mut self) -> Result<(), ConnectorError> {
-        self.connection.close().map_err(ConnectorError::WsClose)
-    }
 }
 
 impl Connector<Http> {
@@ -72,6 +25,38 @@ impl Connector<Http> {
             connection: Http::new(domain, credentials).map_err(ConnectorError::from)?,
             id_pool: (0..1000).collect(),
         })
+    }
+}
+
+impl Connector<WebSocket> {
+    pub fn websocket(
+        domain: &str,
+        credentials: &Option<Credentials>,
+    ) -> Result<Self, ConnectorError> {
+        info!("Creating connector over websocket...");
+        Ok(Connector {
+            connection: WebSocket::new(String::from(domain), credentials.clone())
+                .map_err(ConnectorError::WsInit)?,
+            id_pool: (0..1000).collect(),
+        })
+    }
+
+    pub fn subscribe<U: DeserializeOwned + Debug>(
+        &mut self,
+        sub_request: SubscriptionRequest<U>,
+    ) -> Result<Subscription<U>, ConnectorError> {
+        let mut connector =
+            Connector::websocket(&self.connection.domain, &self.connection.credentials)?;
+        let subscription_id = connector.call(sub_request.rpc)?;
+        Ok(Subscription {
+            id: subscription_id,
+            connector,
+            result_type: PhantomData,
+        })
+    }
+
+    pub fn close(&mut self) -> Result<(), ConnectorError> {
+        self.connection.close().map_err(ConnectorError::WsClose)
     }
 }
 
@@ -115,12 +100,6 @@ fn deserialize_from_rpc<U: DeserializeOwned + Debug>(response: &str) -> Result<U
     }
 }
 
-fn deserialize_from_sub<U: DeserializeOwned + Debug>(response: &str) -> Result<U, ConnectorError> {
-    trace!("Deserializing response {}", response);
-    let value = serde_json::from_str::<Value>(response)?;
-    serde_json::from_value::<U>(value["params"]["result"].clone()).map_err(ConnectorError::from)
-}
-
 #[derive(Deserialize, Debug, Error)]
 #[error("{message}")]
 pub struct JsonError {
@@ -160,8 +139,4 @@ pub enum ConnectorError {
     JsonRpc(#[from] JsonError),
     #[error("Connector Error: {0}")]
     Serde(#[from] serde_json::Error),
-    #[error("Connector Error: No channel found for ticket id")]
-    NoChannel,
-    #[error("Connector Error: Channel is empty")]
-    EmptyChannel,
 }
