@@ -49,7 +49,7 @@ impl WebSocket {
     pub(crate) fn read_message(&mut self) -> Result<String, WebSocketError> {
         match self.read() {
             Ok(Message::Text(response)) => Ok(response),
-            Ok(_) => Err(WebSocketError::NonTextResponse),
+            Ok(_) => self.read_message(),
             Err(err) => Err(err),
         }
     }
@@ -110,8 +110,6 @@ pub enum WebSocketError {
     Url(#[from] http::uri::InvalidUri),
     #[error("WebSocketError: HandshakeError")]
     Handshake,
-    #[error("WebSocketError: Found non-text response")]
-    NonTextResponse,
     #[error("WebSocketError: {0}")]
     InvalidHeader(#[from] http::header::InvalidHeaderValue),
 }

@@ -2,7 +2,7 @@ use super::{Connector, ConnectorError};
 use crate::rpc::eth_unsubscribe;
 use crate::transport::websocket::{WebSocket, WebSocketError};
 use crate::types::U128;
-use log::{error, trace};
+use log::{error, info, trace};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::fmt::Debug;
@@ -22,7 +22,9 @@ impl<T: DeserializeOwned + Debug> Subscription<T> {
         deserialize_from_sub(&response)
     }
 
-    pub fn cancel(self) {}
+    pub fn cancel(self) {
+        info!("Closing subscription with id {}", self.id);
+    }
 }
 
 impl<T: DeserializeOwned + Debug> Drop for Subscription<T> {

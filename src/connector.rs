@@ -20,7 +20,7 @@ pub struct Connector<T> {
 
 impl Connector<Http> {
     pub fn http(domain: &str, credentials: &Option<Credentials>) -> Result<Self, ConnectorError> {
-        info!("Creating connector over http...");
+        info!("Creating connector over http");
         Ok(Connector {
             connection: Http::new(String::from(domain), credentials.clone())
                 .map_err(ConnectorError::from)?,
@@ -34,7 +34,7 @@ impl Connector<WebSocket> {
         domain: &str,
         credentials: &Option<Credentials>,
     ) -> Result<Self, ConnectorError> {
-        info!("Creating connector over websocket...");
+        info!("Creating connector over websocket");
         Ok(Connector {
             connection: WebSocket::new(String::from(domain), credentials.clone())
                 .map_err(ConnectorError::WsInit)?,
@@ -46,6 +46,7 @@ impl Connector<WebSocket> {
         &mut self,
         sub_request: SubscriptionRequest<U>,
     ) -> Result<Subscription<U>, ConnectorError> {
+        info!("Starting a new subscription");
         let mut connector =
             Connector::websocket(&self.connection.domain, &self.connection.credentials)?;
         let subscription_id = connector.call(sub_request.rpc)?;

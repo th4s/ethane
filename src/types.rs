@@ -289,7 +289,7 @@ pub struct GasCall {
     pub data: Option<Bytes>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct Filter {
     #[serde(rename = "fromBlock")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -297,6 +297,14 @@ pub struct Filter {
     #[serde(rename = "toBlock")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub to_block: Option<BlockParameter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<ValueOrVec<H160>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub topics: Option<Vec<Option<ValueOrVec<H256>>>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Default)]
+pub struct FilterSubscription {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<ValueOrVec<H160>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -339,12 +347,12 @@ pub struct TxPoolInspect {
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum SyncInfo {
-    pub Syncing(SyncStatus),
-    pub NotSyncing(bool),
+    Syncing(SyncStatus),
+    NotSyncing(bool),
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
-pub struct SyncInfoSub {
+pub struct SyncInfoSubscription {
     pub syncing: bool,
     pub status: Option<SyncStatus>,
 }

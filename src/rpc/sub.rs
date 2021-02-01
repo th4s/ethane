@@ -1,5 +1,5 @@
 use super::Rpc;
-use crate::types::{BlockHeader, SyncInfoSub, H256, U128};
+use crate::types::{BlockHeader, FilterSubscription, Log, SyncInfoSubscription, H256, U128};
 use std::marker::PhantomData;
 
 pub struct SubscriptionRequest<T> {
@@ -25,9 +25,19 @@ pub fn eth_subscribe_new_pending_transactions() -> SubscriptionRequest<H256> {
     }
 }
 
-pub fn eth_subscribe_syncing() -> SubscriptionRequest<SyncInfoSub> {
+pub fn eth_subscribe_syncing() -> SubscriptionRequest<SyncInfoSubscription> {
     let mut rpc = Rpc::new("eth_subscribe");
     rpc.add_param("syncing");
+    SubscriptionRequest {
+        rpc,
+        result_type: PhantomData,
+    }
+}
+
+pub fn eth_subscribe_logs(filter: FilterSubscription) -> SubscriptionRequest<Log> {
+    let mut rpc = Rpc::new("eth_subscribe");
+    rpc.add_param("logs");
+    rpc.add_param(filter);
     SubscriptionRequest {
         rpc,
         result_type: PhantomData,
