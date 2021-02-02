@@ -10,27 +10,26 @@ use tungstenite::protocol::frame::coding::CloseCode;
 use tungstenite::protocol::CloseFrame;
 use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungstenite};
 
-/// Convenience wrapper over a [websocket](tungstenite::WebSocket) connection of the [tungstenite crate](tungstenite)
+/// Wraps a websocket connection
 pub struct WebSocket {
-    pub(crate) domain: String,
-    pub(crate) credentials: Option<Credentials>,
+    /// The endpoint of the websocket connection
+    pub address: String,
+    pub credentials: Option<Credentials>,
     ws: WebSocketTungstenite<AutoStream>,
 }
 
 impl WebSocket {
-    /// Create a new websocket connection to the specified Uri.
-    /// When used with [credentials](Credentials), will try to attempt HTTP basic authentication for the handshake request.
     pub(crate) fn new(
-        domain: String,
+        address: String,
         credentials: Option<Credentials>,
     ) -> Result<WebSocket, WebSocketError> {
-        debug!("Initiating websocket connection to {}", domain);
-        let uri = Uri::from_str(&domain)?;
+        debug!("Initiating websocket connection to {}", address);
+        let uri = Uri::from_str(&address)?;
         let handshake_request = create_handshake_request(&uri, credentials.clone())?;
         let ws = ws_connect(handshake_request)?;
         trace!("Handshake Response: {:?}", ws.1);
         Ok(WebSocket {
-            domain,
+            address,
             credentials,
             ws: ws.0,
         })
@@ -99,7 +98,7 @@ fn create_handshake_request(
     Ok(request)
 }
 
-/// Collect all kinds of possible websocket errors
+/// An error type collecting what can go wrong with a websocket
 #[derive(Debug, Error)]
 pub enum WebSocketError {
     #[error("WebSocketError: {0}")]

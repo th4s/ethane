@@ -1,8 +1,7 @@
-use ethane::connector::{Connector, ConnectorError, Subscription};
-use ethane::rpc::{Rpc, SubscriptionRequest};
-use ethane::transport::http::Http;
-use ethane::transport::websocket::WebSocket;
-use ethane::transport::Request;
+use ethane::connector::Subscription;
+use ethane::rpc::{sub::SubscriptionRequest, Rpc};
+use ethane::transport::{Http, Request, WebSocket};
+use ethane::{Connector, ConnectorError};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::process::{Child, Command};

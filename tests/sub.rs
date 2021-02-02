@@ -1,4 +1,7 @@
-use ethane::rpc::{self};
+use ethane::rpc::eth_send_transaction;
+use ethane::rpc::sub::{
+    eth_subscribe_logs, eth_subscribe_new_heads, eth_subscribe_new_pending_transactions,
+};
 use ethane::types::{
     BlockHeader, Bytes, FilterSubscription, Log, TransactionRequest, ValueOrVec, U256,
 };
@@ -12,9 +15,9 @@ use ethereum_types::H256;
 use fixtures::*;
 
 #[test]
-fn eth_subscribe_new_heads() {
+fn test_eth_subscribe_new_heads() {
     let mut client = ClientWrapper::Websocket(Client::ws());
-    let mut subscription = client.subscribe(rpc::eth_subscribe_new_heads()).unwrap();
+    let mut subscription = client.subscribe(eth_subscribe_new_heads()).unwrap();
     let mut blocks = Vec::<BlockHeader>::new();
     loop {
         let transaction = TransactionRequest {
@@ -23,7 +26,7 @@ fn eth_subscribe_new_heads() {
             value: Some(U256::zero()),
             ..Default::default()
         };
-        let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+        let tx_hash = client.call(eth_send_transaction(transaction)).unwrap();
         wait_for_transaction(&mut client, tx_hash);
         blocks.push(subscription.next_item().unwrap());
         if blocks.len() >= 2 {
@@ -33,10 +36,10 @@ fn eth_subscribe_new_heads() {
 }
 
 #[test]
-fn eth_subscribe_new_pending_transactions() {
+fn test_eth_subscribe_new_pending_transactions() {
     let mut client = ClientWrapper::Websocket(Client::ws());
     let mut subscription = client
-        .subscribe(rpc::eth_subscribe_new_pending_transactions())
+        .subscribe(eth_subscribe_new_pending_transactions())
         .unwrap();
     let mut transactions = Vec::<H256>::new();
     loop {
@@ -46,7 +49,7 @@ fn eth_subscribe_new_pending_transactions() {
             value: Some(U256::zero()),
             ..Default::default()
         };
-        let tx_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
+        let tx_hash = client.call(eth_send_transaction(transaction)).unwrap();
         wait_for_transaction(&mut client, tx_hash);
         transactions.push(subscription.next_item().unwrap());
         if transactions.len() >= 2 {
@@ -56,7 +59,7 @@ fn eth_subscribe_new_pending_transactions() {
 }
 
 #[test]
-fn eth_subscribe_logs() {
+fn test_eth_subscribe_logs() {
     let mut client = ClientWrapper::Websocket(Client::ws());
     let address = create_account(&mut client).1;
     let (contract_address, _) = deploy_contract(
@@ -72,7 +75,7 @@ fn eth_subscribe_logs() {
         topics: Some(vec![Some(ValueOrVec::Value(H256::from_slice(&topic)))]),
     };
     let mut logs = Vec::<Log>::new();
-    let mut subscription = client.subscribe(rpc::eth_subscribe_logs(filter)).unwrap();
+    let mut subscription = client.subscribe(eth_subscribe_logs(filter)).unwrap();
     let out = keccak(b"set_pos0()");
 
     loop {
@@ -82,7 +85,7 @@ fn eth_subscribe_logs() {
             data: Some(Bytes::from_slice(&out[..4])),
             ..Default::default()
         };
-        let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+        let tx_hash = client.call(eth_send_transaction(tx)).unwrap();
         wait_for_transaction(&mut client, tx_hash);
         logs.push(subscription.next_item().unwrap());
 

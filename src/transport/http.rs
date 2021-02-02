@@ -4,24 +4,28 @@ use log::{debug, trace};
 use thiserror::Error;
 use ureq::{Agent, Error as UreqError, Request as UreqRequest};
 
+/// Wraps a http client
 pub struct Http {
     agent: Agent,
-    domain: String,
+    address: String,
     credentials: Option<Credentials>,
 }
 
 impl Http {
-    pub(crate) fn new(domain: String, credentials: Option<Credentials>) -> Result<Self, HttpError> {
-        debug!("Creating http client to {}", domain);
+    pub(crate) fn new(
+        address: String,
+        credentials: Option<Credentials>,
+    ) -> Result<Self, HttpError> {
+        debug!("Creating http client to {}", address);
         Ok(Http {
             agent: Agent::new(),
-            domain,
+            address,
             credentials,
         })
     }
 
     fn prepare_request(&self, method: &str, path: Option<&str>) -> UreqRequest {
-        let mut domain = self.domain.clone();
+        let mut domain = self.address.clone();
         if let Some(path) = path {
             domain.push_str(path);
         }
@@ -53,6 +57,7 @@ impl Request for Http {
     }
 }
 
+/// An error type collecting what can go wrong with http requests
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum HttpError {

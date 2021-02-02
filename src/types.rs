@@ -1,3 +1,7 @@
+//! Collects all the needed Ethereum types
+//!
+//! This module provides custom types, but also re-exports some types from [ethereum_types].
+
 pub use ethereum_types::{Bloom, H160, H256, H64, U128, U256, U64};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};

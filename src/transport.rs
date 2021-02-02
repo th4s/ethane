@@ -1,19 +1,25 @@
+//! Possible transports which are supported by the [Connector](crate::Connector)
+
 use thiserror::Error;
 
-pub mod http;
-pub mod websocket;
+pub use self::http::{Http, HttpError};
+pub use websocket::{WebSocket, WebSocketError};
+mod http;
+mod websocket;
 
+///Implemented by transports which offer request functionality
 pub trait Request {
     fn request(&mut self, cmd: String) -> Result<String, TransportError>;
 }
 
-/// Used for HTTP basic authentication during the handshake request
+/// Can be used for HTTP basic authentication
 #[derive(Debug, Clone)]
 pub struct Credentials {
     pub username: String,
     pub password: String,
 }
 
+/// An error type collecting what can go wrong during transport
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum TransportError {

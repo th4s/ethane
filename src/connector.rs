@@ -1,7 +1,8 @@
-use crate::rpc::{Rpc, SubscriptionRequest};
-use crate::transport::http::{Http, HttpError};
-use crate::transport::websocket::{WebSocket, WebSocketError};
+//! Allows connecting to an ethereum node
+
+use crate::rpc::{sub::SubscriptionRequest, Rpc};
 use crate::transport::{Credentials, Request, TransportError};
+use crate::transport::{Http, HttpError, WebSocket, WebSocketError};
 use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -11,14 +12,19 @@ use std::marker::PhantomData;
 use thiserror::Error;
 
 mod subscription;
-pub use subscription::Subscription;
+pub use subscription::{Subscription, SubscriptionError};
 
+/// Used to to interact with ethereum nodes
+///
+/// This is basically a connection wrapper for sending requests or starting subscriptions.
 pub struct Connector<T> {
     connection: T,
     id_pool: VecDeque<usize>,
 }
 
 impl Connector<Http> {
+    /// Create a connector with a http connection. Does **not** allow to subscribe to node events.
+    /// If your node supports http basic authentication you can use the credentials.
     pub fn http(domain: &str, credentials: &Option<Credentials>) -> Result<Self, ConnectorError> {
         info!("Creating connector over http");
         Ok(Connector {
@@ -30,25 +36,29 @@ impl Connector<Http> {
 }
 
 impl Connector<WebSocket> {
+    /// Create a connector with a websocket connection.
+    /// If your node supports http basic authentication you can use the credentials.
     pub fn websocket(
         domain: &str,
         credentials: &Option<Credentials>,
     ) -> Result<Self, ConnectorError> {
         info!("Creating connector over websocket");
         Ok(Connector {
-            connection: WebSocket::new(String::from(domain), credentials.clone())
-                .map_err(ConnectorError::WsInit)?,
+            connection: WebSocket::new(String::from(domain), credentials.clone())?,
             id_pool: (0..1000).collect(),
         })
     }
 
+    /// Starts a new subscription.
+    /// Use one of these rpc generating [functions](crate::rpc::sub) to provide the subscription request.
+    /// Returns a [subscription](Subscription) which you can poll for new items.
     pub fn subscribe<U: DeserializeOwned + Debug>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
     ) -> Result<Subscription<U>, ConnectorError> {
         info!("Starting a new subscription");
         let mut connector =
-            Connector::websocket(&self.connection.domain, &self.connection.credentials)?;
+            Connector::websocket(&self.connection.address, &self.connection.credentials)?;
         let subscription_id = connector.call(sub_request.rpc)?;
         Ok(Subscription {
             id: subscription_id,
@@ -56,13 +66,12 @@ impl Connector<WebSocket> {
             result_type: PhantomData,
         })
     }
-
-    pub fn close(&mut self) -> Result<(), ConnectorError> {
-        self.connection.close().map_err(ConnectorError::WsClose)
-    }
 }
 
 impl<T: Request> Connector<T> {
+    /// Sends a request to an ethereum node. Use a function in one of these namespaces
+    /// [functions](crate::rpc) to generate the request. Does **not** support the
+    /// subscription(crate::rpc::sub) namespace.
     pub fn call<U: DeserializeOwned + Debug>(
         &mut self,
         mut rpc: Rpc<U>,
@@ -102,6 +111,7 @@ fn deserialize_from_rpc<U: DeserializeOwned + Debug>(response: &str) -> Result<U
     }
 }
 
+/// Used to deserialize errors returned from the ethereum node
 #[derive(Deserialize, Debug, Error)]
 #[error("{message}")]
 pub struct JsonError {
@@ -125,12 +135,11 @@ enum RpcResult<T> {
     Error(JsonError),
 }
 
+/// An error type collecting what can go wrong using a connector
 #[derive(Debug, Error)]
 pub enum ConnectorError {
     #[error("Connector Error: {0}")]
-    WsInit(WebSocketError),
-    #[error("Connector Error: {0}")]
-    WsClose(WebSocketError),
+    WsInit(#[from] WebSocketError),
     #[error("Connector Error: {0}")]
     HttpInit(#[from] HttpError),
     #[error("Connector Error: Maximum number of connections reached")]

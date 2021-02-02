@@ -1,7 +1,10 @@
+//! Provides functions used for subscriptions
+
 use super::Rpc;
 use crate::types::{BlockHeader, FilterSubscription, Log, SyncInfoSubscription, H256, U128};
 use std::marker::PhantomData;
 
+/// Rpc to start a subscription
 pub struct SubscriptionRequest<T> {
     pub(crate) rpc: Rpc<U128>,
     result_type: PhantomData<T>,
@@ -44,7 +47,7 @@ pub fn eth_subscribe_logs(filter: FilterSubscription) -> SubscriptionRequest<Log
     }
 }
 
-pub fn eth_unsubscribe(sub_id: U128) -> Rpc<bool> {
+pub(crate) fn eth_unsubscribe(sub_id: U128) -> Rpc<bool> {
     let mut rpc = Rpc::new("eth_unsubscribe");
     rpc.add_param(sub_id);
     rpc
