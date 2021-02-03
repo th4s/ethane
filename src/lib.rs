@@ -21,7 +21,7 @@
 //!
 //! // Start up connector
 //! let node_endpoint = "http://127.0.0.1:8545";
-//! let mut connector = Connector::http(node_endpoint, &None).unwrap();
+//! let mut connector = Connector::http(node_endpoint, None).unwrap();
 //!
 //! // Make a request
 //! let address = H160::zero();
@@ -40,7 +40,7 @@
 //!
 //! // Start up connector with websockets
 //! let node_endpoint = "ws://127.0.0.1:8546";
-//! let mut connector = Connector::websocket(node_endpoint, &None).unwrap();
+//! let mut connector = Connector::websocket(node_endpoint, None).unwrap();
 //!
 //! // Subscribe to pending transactions
 //! let mut tx_subscription = connector

@@ -14,9 +14,10 @@ pub trait Request {
 
 /// Credentials can be used for authentication
 ///
-/// Use this when creating a [connector](crate::Connector) that supports either JWT or HTTP basic
-/// authentication. This will add an Authorization header to your requests and works for
-/// [websockets](crate::Connector::websocket) and [http requests](crate::Connector::http).
+/// Use this when creating a [connector](crate::Connector). Supports Basic and Bearer authentication.
+/// So you can easily add HTTP Basic or JWT authentication. This will add an authorization header
+/// to your requests and works for [websockets](crate::Connector::websocket) and
+/// [http requests](crate::Connector::http).
 #[derive(Debug, Clone)]
 pub enum Credentials {
     Jwt(String),
@@ -32,7 +33,7 @@ impl Credentials {
     }
 }
 
-/// An error type collecting what can go wrong during transport
+/// Wraps the different transport errors that can happen
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum TransportError {
