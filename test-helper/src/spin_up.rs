@@ -14,7 +14,7 @@ pub enum ClientWrapper {
 impl ClientWrapper {
     pub fn new_from_env() -> ClientWrapper {
         match std::env::var("CONNECTION")
-            .unwrap_or(String::from("http"))
+            .unwrap_or_else(|_| String::from("http"))
             .as_str()
         {
             "http" => Self::Http(Client::http()),

@@ -1,4 +1,4 @@
-pub const TEST_CONTRACT_PATH: &str = "./tests/fixtures/TestContract.sol";
+pub const TEST_CONTRACT_PATH: &str = "./test-helper/src/fixtures/TestContract.sol";
 pub const TEST_CONTRACT_NAME: &str = "TestContract";
 pub const ACCOUNTS_PASSWORD: &str = "12345678";
 pub const FIX_SECRET: &str = "fdc861959d1768d936bf17eec56260d4de3a7473e58c349e31beba539e5fc88d";

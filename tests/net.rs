@@ -1,10 +1,6 @@
 use ethane::rpc;
 
-pub mod helper;
-use helper::*;
-
-pub mod fixtures;
-use fixtures::*;
+use test_helper::*;
 
 #[test]
 fn test_net_version() {

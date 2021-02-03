@@ -3,16 +3,11 @@ use ethane::rpc::sub::{
     eth_subscribe_logs, eth_subscribe_new_heads, eth_subscribe_new_pending_transactions,
 };
 use ethane::types::{
-    BlockHeader, Bytes, FilterSubscription, Log, TransactionRequest, ValueOrVec, U256,
+    BlockHeader, Bytes, FilterSubscription, Log, TransactionRequest, ValueOrVec, H256, U256,
 };
 use std::path::Path;
 
-pub mod helper;
-use helper::*;
-
-pub mod fixtures;
-use ethereum_types::H256;
-use fixtures::*;
+use test_helper::*;
 
 #[test]
 fn test_eth_subscribe_new_heads() {

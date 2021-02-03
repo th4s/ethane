@@ -13,14 +13,15 @@ use tiny_keccak::{Hasher, Keccak};
 mod spin_up;
 pub use spin_up::{Client, ClientWrapper};
 
-use crate::ACCOUNTS_PASSWORD;
+mod fixtures;
+pub use fixtures::*;
 
 pub fn wait_for_transaction(client: &mut ClientWrapper, tx_hash: H256) {
     loop {
         let transaction = client
             .call(rpc::eth_get_transaction_by_hash(tx_hash))
             .unwrap();
-        if let Some(_) = transaction.block_hash {
+        if transaction.block_hash.is_some() {
             break;
         }
     }
@@ -105,7 +106,7 @@ pub fn deploy_contract(
     let address = address;
     let transaction = TransactionRequest {
         from: address,
-        data: Some(contract_bytes.clone()),
+        data: Some(contract_bytes),
         ..Default::default()
     };
     let transaction_hash = client.call(rpc::eth_send_transaction(transaction)).unwrap();
@@ -134,7 +135,7 @@ pub fn keccak(input: &[u8]) -> [u8; 32] {
     out
 }
 
-pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq>(
+pub fn rpc_call_test_expected<T: DeserializeOwned + Debug + PartialEq>(
     client: &mut ClientWrapper,
     rpc: Rpc<T>,
     expected: T,
@@ -144,7 +145,7 @@ pub fn rpc_call_test_expected<'a, T: DeserializeOwned + Debug + PartialEq>(
             println!("{:?}", res);
             assert_eq!(res, expected);
         }
-        Err(err) => assert!(false, format!("{}", err)),
+        Err(err) => panic!("{}", err),
     }
 }
 
@@ -155,8 +156,7 @@ pub fn rpc_call_test_some<T: DeserializeOwned + Debug + PartialEq>(
     match client.call(rpc) {
         Ok(res) => {
             println!("{:?}", res);
-            assert!(true);
         }
-        Err(err) => assert!(false, format!("{}", err)),
+        Err(err) => panic!("{}", err),
     }
 }
