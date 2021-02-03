@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 
+/// Information about block number, defaults to `BlockParameter::Latest`
 #[derive(Copy, Clone, Debug, PartialEq, Deserialize)]
 pub enum BlockParameter {
     Latest,
@@ -34,6 +35,7 @@ impl Default for BlockParameter {
     }
 }
 
+/// Used for creating transactions
 #[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct TransactionRequest {
     pub from: H160,
@@ -52,6 +54,7 @@ pub struct TransactionRequest {
     pub nonce: Option<U256>,
 }
 
+/// A pending or processed transaction
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Transaction {
     #[serde(rename = "blockHash")]
@@ -74,6 +77,7 @@ pub struct Transaction {
     pub s: Option<U256>,
 }
 
+/// Transaction receipt of a processed transaction
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TransactionReceipt {
     #[serde(rename = "transactionHash")]
@@ -98,6 +102,7 @@ pub struct TransactionReceipt {
     pub status: U64,
 }
 
+///Contains information about events
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Log {
     pub address: H160,
@@ -118,6 +123,7 @@ pub struct Log {
     pub removed: bool,
 }
 
+/// A type for hex values of arbitrary length
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Bytes(pub Vec<u8>);
 
@@ -176,6 +182,7 @@ impl<'de> Visitor<'de> for BytesVisitor {
     }
 }
 
+/// Wrapper for private keys to allow for 0x-prefixed and plain serialization
 #[derive(Clone, Debug, PartialEq)]
 pub enum PrivateKey {
     ZeroXPrefixed(H256),
@@ -191,6 +198,7 @@ impl Serialize for PrivateKey {
     }
 }
 
+/// Standard block type
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct Block {
     pub number: Option<U64>,
@@ -224,6 +232,7 @@ pub struct Block {
     pub uncles: Vec<H256>,
 }
 
+/// BlockHeader returned by subscription
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct BlockHeader {
     pub number: Option<U64>,
@@ -253,6 +262,7 @@ pub struct BlockHeader {
     pub mix_hash: Option<H256>,
 }
 
+/// Wrapper to allow returned blocks to contain complete transactions or hashes
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum TransactionOrHash {
@@ -260,6 +270,7 @@ pub enum TransactionOrHash {
     Hash(H256),
 }
 
+/// Call object for querying data
 #[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct Call {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,6 +287,7 @@ pub struct Call {
     pub data: Option<Bytes>,
 }
 
+/// Used to estimate gas
 #[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct GasCall {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -293,6 +305,7 @@ pub struct GasCall {
     pub data: Option<Bytes>,
 }
 
+/// A filter object to listen for events
 #[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct Filter {
     #[serde(rename = "fromBlock")]
@@ -307,6 +320,7 @@ pub struct Filter {
     pub topics: Option<Vec<Option<ValueOrVec<H256>>>>,
 }
 
+/// Filter object used in subscriptions
 #[derive(Clone, Debug, PartialEq, Serialize, Default)]
 pub struct FilterSubscription {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -315,13 +329,15 @@ pub struct FilterSubscription {
     pub topics: Option<Vec<Option<ValueOrVec<H256>>>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+/// Wrapper to allow a single value or a list of values
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ValueOrVec<T> {
     Value(T),
     Vec(Vec<T>),
 }
 
+/// Wrapper to allow filter RPCs to return a transaction hash or a log object
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
@@ -330,24 +346,28 @@ pub enum HashOrLog {
     Log(Log),
 }
 
+/// Status of the transaction pool
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TxPoolStatus {
     pub pending: U256,
     pub queued: U256,
 }
 
+/// Content of the transaction pool
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TxPoolContent {
     pub pending: HashMap<H160, HashMap<String, Transaction>>,
     pub queued: HashMap<H160, HashMap<String, Transaction>>,
 }
 
+/// Content of transaction pool in debug view
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct TxPoolInspect {
     pub pending: HashMap<H160, HashMap<String, String>>,
     pub queued: HashMap<H160, HashMap<String, String>>,
 }
 
+/// Wrapper for node synchronization info
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum SyncInfo {
@@ -355,12 +375,14 @@ pub enum SyncInfo {
     NotSyncing(bool),
 }
 
+/// Wrapper for node synchronization info in a subscription
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct SyncInfoSubscription {
     pub syncing: bool,
     pub status: Option<SyncStatus>,
 }
 
+/// Status object containing information about node synchronization
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct SyncStatus {
     #[serde(rename = "startingBlock")]

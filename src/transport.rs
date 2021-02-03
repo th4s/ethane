@@ -12,7 +12,7 @@ pub trait Request {
     fn request(&mut self, cmd: String) -> Result<String, TransportError>;
 }
 
-/// Can be used for HTTP basic authentication
+/// Can be used for authentication
 #[derive(Debug, Clone)]
 pub struct Credentials {
     pub username: String,
