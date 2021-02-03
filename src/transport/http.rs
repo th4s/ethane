@@ -6,9 +6,10 @@ use ureq::{Agent, Error as UreqError, Request as UreqRequest};
 
 /// Wraps a http client
 pub struct Http {
+    /// The domain where requests are sent
+    pub address: String,
+    pub(crate) credentials: Option<Credentials>,
     agent: Agent,
-    address: String,
-    credentials: Option<Credentials>,
 }
 
 impl Http {

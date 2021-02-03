@@ -14,7 +14,7 @@ use tungstenite::{connect as ws_connect, Message, WebSocket as WebSocketTungsten
 pub struct WebSocket {
     /// The endpoint of the websocket connection
     pub address: String,
-    pub credentials: Option<Credentials>,
+    pub(crate) credentials: Option<Credentials>,
     ws: WebSocketTungstenite<AutoStream>,
 }
 
@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_handshake_request_with_credentials() {
+    fn test_websocket_create_handshake_request_with_credentials() {
         let uri = Uri::from_static("localhost");
         let credentials = Credentials {
             username: String::from("abc"),
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_handshake_request_without_credentials() {
+    fn test_websocket_create_handshake_request_without_credentials() {
         let uri = Uri::from_static("localhost");
         let request = create_handshake_request(&uri, None).unwrap();
         assert_eq!(request.method(), http::method::Method::GET);
@@ -175,15 +175,10 @@ mod tests {
     }
 
     #[test]
-    fn test_new() {
+    fn test_websocket_request() {
         spawn_websocket_server(ping_pong, 3001);
         let mut ws_client = WebSocket::new(String::from("ws://localhost:3001"), None).unwrap();
-        ws_client
-            .write(Message::Text(String::from("Ping")))
-            .unwrap();
-        match ws_client.read() {
-            Ok(Message::Text(text)) => assert_eq!(text, "Ping Pong"),
-            _ => assert!(false),
-        };
+        let response = ws_client.request(String::from("Ping")).unwrap();
+        assert_eq!(response, "Ping Pong");
     }
 }
