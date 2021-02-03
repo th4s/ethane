@@ -1,5 +1,13 @@
 //! Ethane is an alternative web3 implementation with the aim of being slim and simple.
-//! It does not depend on futures, async/await or any executors.
+//! It does not depend on futures, async/await or any executors. It currently supports http and
+//! websockets (both plain and TLS) and inter process communication via UNIX domain sockets. For
+//! http and websockets it also supports HTTP basic auth and JWT authentication.
+//!
+//! Currently only Eth1 is supported and not all namespaces are implemented. You can have a look here
+//! ([supported RPCs](crate::rpc)) to see what is supported.
+//!
+//! In order to get started, just create a [connector](crate::Connector) over some transport.
+//! The following examples show you how to make a request or how to subscribe to events.
 //!
 //! # Examples
 //!

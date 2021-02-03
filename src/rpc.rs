@@ -1,4 +1,4 @@
-//! Functions to generate [Rpc](Rpc)s
+//! Functions to generate Rpcs
 //!
 //! These functions are a type-safe implementation of
 //! - the official [JSON RPC spec](https://eth.wiki/json-rpc/API)
@@ -10,7 +10,7 @@
 //! There are some deviations between what is really supported and the official specification.
 //! This is why some functions are marked as deprecated. They will probably be removed.
 //!
-//! Use the functions supplied in these modules to generate [Rpc](Rpc) objects and supply them to the
+//! Use these functions supplied here to generate [Rpc](Rpc) objects and pass them to the
 //! [call](crate::Connector::call) function of a [connector](crate::Connector).
 
 use log::error;
@@ -36,7 +36,7 @@ mod web3;
 
 /// Wrapper for the remote procedure call
 ///
-/// This is usually not directly needed and returned by functions located in the [modules](crate::rpc) which
+/// This is usually not directly needed and returned by the [functions](crate::rpc) which
 /// wrap the different namespaces. However, it is also possible to create custom Rpc structs.
 #[derive(Serialize, Debug)]
 pub struct Rpc<T: DeserializeOwned + Debug> {
