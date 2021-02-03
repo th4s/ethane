@@ -3,7 +3,7 @@
 //!
 //! # Examples
 //!
-//! ## Simple request over http
+//! ## Request over http
 //! ```
 //! use ethane::Connector;
 //! use ethane::rpc::eth_get_balance;
@@ -20,7 +20,7 @@
 //! let balance = connector.call(eth_get_balance(address, None)).unwrap();
 //! ```
 //!
-//! ## Starting a subscription
+//! ## Starting a subscription over websocket
 //! ```
 //! use ethane::Connector;
 //! use ethane::rpc::sub::eth_subscribe_new_pending_transactions;

@@ -1,6 +1,7 @@
 use ethane::rpc::eth_send_transaction;
 use ethane::rpc::sub::{
     eth_subscribe_logs, eth_subscribe_new_heads, eth_subscribe_new_pending_transactions,
+    eth_subscribe_syncing,
 };
 use ethane::types::{
     BlockHeader, Bytes, FilterSubscription, Log, TransactionRequest, ValueOrVec, H256, U256,
@@ -88,4 +89,13 @@ fn test_eth_subscribe_logs() {
             break assert!(true);
         }
     }
+}
+
+// This is hard to test in development mode
+#[test]
+#[ignore]
+fn test_eth_subscribe_syncing() {
+    let mut client = ConnectorWrapper::Websocket(ConnectorNodeBundle::ws());
+    let mut subscription = client.subscribe(eth_subscribe_syncing()).unwrap();
+    let _sync_info_sub = subscription.next_item().unwrap();
 }
