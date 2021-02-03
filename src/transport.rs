@@ -12,11 +12,24 @@ pub trait Request {
     fn request(&mut self, cmd: String) -> Result<String, TransportError>;
 }
 
-/// Can be used for authentication
+/// Credentials can be used for authentication
+///
+/// Use this when creating a [connector](crate::Connector) that supports either JWT or HTTP basic
+/// authentication. This will add an Authorization header to your requests and works for
+/// [websockets](crate::Connector::websocket) and [http requests](crate::Connector::http).
 #[derive(Debug, Clone)]
-pub struct Credentials {
-    pub username: String,
-    pub password: String,
+pub enum Credentials {
+    Jwt(String),
+    Basic(String),
+}
+
+impl Credentials {
+    pub fn to_auth_string(&self) -> String {
+        match self {
+            Self::Jwt(token) => String::from("Bearer ") + &token,
+            Self::Basic(token) => String::from("Basic ") + &token,
+        }
+    }
 }
 
 /// An error type collecting what can go wrong during transport

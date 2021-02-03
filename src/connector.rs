@@ -24,11 +24,10 @@ pub struct Connector<T> {
 
 impl Connector<Http> {
     /// Create a connector with a http connection. Does **not** allow to subscribe to node events.
-    /// If your node supports http basic authentication you can use the credentials.
-    pub fn http(domain: &str, credentials: &Option<Credentials>) -> Result<Self, ConnectorError> {
+    pub fn http(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
         info!("Creating connector over http");
         Ok(Connector {
-            connection: Http::new(String::from(domain), credentials.clone())
+            connection: Http::new(String::from(domain), credentials)
                 .map_err(ConnectorError::from)?,
             id_pool: (0..1000).collect(),
         })
@@ -37,14 +36,13 @@ impl Connector<Http> {
 
 impl Connector<WebSocket> {
     /// Create a connector with a websocket connection.
-    /// If your node supports http basic authentication you can use the credentials.
     pub fn websocket(
         domain: &str,
-        credentials: &Option<Credentials>,
+        credentials: Option<Credentials>,
     ) -> Result<Self, ConnectorError> {
         info!("Creating connector over websocket");
         Ok(Connector {
-            connection: WebSocket::new(String::from(domain), credentials.clone())?,
+            connection: WebSocket::new(String::from(domain), credentials)?,
             id_pool: (0..1000).collect(),
         })
     }
@@ -57,8 +55,10 @@ impl Connector<WebSocket> {
         sub_request: SubscriptionRequest<U>,
     ) -> Result<Subscription<U>, ConnectorError> {
         info!("Starting a new subscription");
-        let mut connector =
-            Connector::websocket(&self.connection.address, &self.connection.credentials)?;
+        let mut connector = Connector::websocket(
+            &self.connection.address,
+            self.connection.credentials.clone(),
+        )?;
         let subscription_id = connector.call(sub_request.rpc)?;
         Ok(Subscription {
             id: subscription_id,

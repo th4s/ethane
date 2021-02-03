@@ -87,12 +87,11 @@ fn create_handshake_request(
     credentials: Option<Credentials>,
 ) -> Result<HttpRequest<()>, WebSocketError> {
     let mut req_builder = HttpRequest::get(uri);
-    if let Some(credentials) = credentials {
-        let auth_string_base64 = String::from("Basic ")
-            + &base64::encode(credentials.username + ":" + &credentials.password);
+    if let Some(ref credentials) = credentials {
         let headers = req_builder.headers_mut().ok_or(WebSocketError::Handshake)?;
-        headers.insert("Authorization", auth_string_base64.parse()?);
+        headers.insert("Authorization", credentials.to_auth_string().parse()?);
     }
+
     let request = req_builder.body(())?;
     trace!("Built websocket handshake request: {:?}", &request);
     Ok(request)
@@ -155,10 +154,7 @@ mod tests {
     #[test]
     fn test_websocket_create_handshake_request_with_credentials() {
         let uri = Uri::from_static("localhost");
-        let credentials = Credentials {
-            username: String::from("abc"),
-            password: String::from("123"),
-        };
+        let credentials = Credentials::Basic(String::from("YWJjOjEyMw=="));
         let request = create_handshake_request(&uri, Some(credentials)).unwrap();
         assert_eq!(
             request.headers().get("Authorization").unwrap(),

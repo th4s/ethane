@@ -32,11 +32,8 @@ impl Http {
         }
 
         let mut request = self.agent.request(method, &domain);
-
-        if let Some(credentials) = self.credentials.clone() {
-            let auth_string_base64 = String::from("Basic ")
-                + &base64::encode(credentials.username + ":" + &credentials.password);
-            request = request.set("Authorization", &auth_string_base64);
+        if let Some(ref credentials) = self.credentials {
+            request = request.set("Authorization", &credentials.to_auth_string());
         }
         request
     }

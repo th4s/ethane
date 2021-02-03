@@ -72,7 +72,7 @@ impl ConnectorNodeBundle<WebSocket> {
     pub fn ws() -> Self {
         let process = NodeProcess::new(None, None);
         let connector =
-            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), &None).unwrap();
+            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
@@ -81,7 +81,7 @@ impl ConnectorNodeBundle<Http> {
     pub fn http() -> Self {
         let process = NodeProcess::new(None, None);
         let connector =
-            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), &None).unwrap();
+            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), None).unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
