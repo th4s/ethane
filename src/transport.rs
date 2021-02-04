@@ -5,6 +5,7 @@ use thiserror::Error;
 pub use self::http::{Http, HttpError};
 pub use websocket::{WebSocket, WebSocketError};
 mod http;
+mod uds;
 mod websocket;
 
 ///Implemented by transports which offer request functionality
@@ -20,14 +21,14 @@ pub trait Request {
 /// [http requests](crate::Connector::http).
 #[derive(Debug, Clone)]
 pub enum Credentials {
-    Jwt(String),
+    Bearer(String),
     Basic(String),
 }
 
 impl Credentials {
     pub fn to_auth_string(&self) -> String {
         match self {
-            Self::Jwt(token) => String::from("Bearer ") + &token,
+            Self::Bearer(token) => String::from("Bearer ") + &token,
             Self::Basic(token) => String::from("Basic ") + &token,
         }
     }
@@ -41,4 +42,6 @@ pub enum TransportError {
     WebSocketError(#[from] websocket::WebSocketError),
     #[error("{0}")]
     HttpError(#[from] http::HttpError),
+    #[error("{0}")]
+    UdsError(#[from] uds::UdsError),
 }

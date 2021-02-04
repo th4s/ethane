@@ -35,16 +35,6 @@ impl WebSocket {
         })
     }
 
-    pub(crate) fn close(&mut self) -> Result<(), WebSocketError> {
-        debug!("Closing websocket connection");
-        let close_frame = CloseFrame {
-            code: CloseCode::Normal,
-            reason: Cow::from("Finished"),
-        };
-        self.ws.close(Some(close_frame))?;
-        self.ws.write_pending().map_err(WebSocketError::from)
-    }
-
     pub(crate) fn read_message(&mut self) -> Result<String, WebSocketError> {
         match self.read() {
             Ok(Message::Text(response)) => Ok(response),
@@ -63,6 +53,16 @@ impl WebSocket {
         trace!("Writing to websocket: {}", message);
         self.ws.write_message(message)?;
         Ok(())
+    }
+
+    fn close(&mut self) -> Result<(), WebSocketError> {
+        debug!("Closing websocket connection");
+        let close_frame = CloseFrame {
+            code: CloseCode::Normal,
+            reason: Cow::from("Finished"),
+        };
+        self.ws.close(Some(close_frame))?;
+        self.ws.write_pending().map_err(WebSocketError::from)
     }
 }
 
