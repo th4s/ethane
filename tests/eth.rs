@@ -631,10 +631,7 @@ fn test_eth_get_filter_changes_block_filter() {
     let filter_id = client.call(rpc::eth_new_block_filter()).unwrap();
     let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
     wait_for_transaction(&mut client, tx_hash);
-    rpc_call_test_some(
-        &mut client,
-        rpc::eth_get_filter_changes(U128::from(filter_id)),
-    );
+    rpc_call_test_some(&mut client, rpc::eth_get_filter_changes(filter_id));
 }
 
 // DEVIATION FROM SPEC
@@ -652,7 +649,7 @@ fn test_eth_get_filter_logs() {
     let filter_id = client.call(rpc::eth_new_block_filter()).unwrap();
     let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
     wait_for_transaction(&mut client, tx_hash);
-    rpc_call_test_some(&mut client, rpc::eth_get_filter_logs(U128::from(filter_id)));
+    rpc_call_test_some(&mut client, rpc::eth_get_filter_logs(filter_id));
 }
 
 #[test]
