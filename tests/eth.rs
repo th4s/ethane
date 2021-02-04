@@ -345,6 +345,8 @@ fn test_eth_sign() {
 
 // DEVIATION FROM SPEC
 // c.f. https://github.com/ethereum/go-ethereum/issues/22223
+// also geth returns something like: {raw: hex_encoded_tx, tx: json_encoded_tx}, however according to JSON RPC
+// it should return only the transaction hash
 #[test]
 #[ignore]
 fn test_eth_sign_transaction() {
@@ -358,9 +360,6 @@ fn test_eth_sign_transaction() {
     rpc_call_test_some(&mut client, rpc::eth_sign_transaction(transaction));
 }
 
-// DEVIATION FROM SPEC
-// Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
-// it should return only the transaction hash
 #[test]
 #[ignore]
 fn test_eth_send_raw_transaction() {

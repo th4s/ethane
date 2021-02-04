@@ -137,15 +137,14 @@ pub fn eth_sign(address: H160, data: Bytes) -> Rpc<Bytes> {
 
 // DEVIATION FROM SPEC
 // c.f. https://github.com/ethereum/go-ethereum/issues/22223
+// also geth returns something like: {raw: hex_encoded_tx, tx: json_encoded_tx}, however according to JSON RPC
+// it should return only the transaction hash
 pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<Bytes> {
     let mut rpc = Rpc::new("eth_signTransaction");
     rpc.add_param(transaction);
     rpc
 }
 
-// DEVIATION FROM SPEC
-// Geth returns something like: {raw: H160, tx: Transaction}, however according to JSON RPC
-// it should return only the transaction hash
 pub fn eth_send_raw_transaction(raw_transaction: Bytes) -> Rpc<H256> {
     let mut rpc = Rpc::new("eth_sendRawTransaction");
     rpc.add_param(raw_transaction);
