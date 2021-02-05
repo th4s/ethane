@@ -1,5 +1,4 @@
-use super::Credentials;
-use super::{Request, Subscribe, TransportError};
+use super::{Credentials, Request, Subscribe, TransportError};
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
 use std::borrow::Cow;
@@ -35,7 +34,7 @@ impl WebSocket {
         })
     }
 
-    pub(crate) fn read_message(&mut self) -> Result<String, WebSocketError> {
+    fn read_message(&mut self) -> Result<String, WebSocketError> {
         match self.read() {
             Ok(Message::Text(response)) => Ok(response),
             Ok(_) => self.read_message(),
@@ -50,7 +49,7 @@ impl WebSocket {
     }
 
     fn write(&mut self, message: Message) -> Result<(), WebSocketError> {
-        trace!("Writing to websocket: {}", message);
+        trace!("Writing to websocket: {}", &message);
         self.ws.write_message(message)?;
         Ok(())
     }

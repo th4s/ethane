@@ -1,8 +1,10 @@
 //! Allows connecting to an ethereum node
 
 use crate::rpc::{sub::SubscriptionRequest, Rpc};
-use crate::transport::{Credentials, Request, Subscribe, TransportError};
-use crate::transport::{Http, HttpError, WebSocket, WebSocketError};
+use crate::transport::{
+    Credentials, Http, HttpError, Request, Subscribe, TransportError, Uds, UdsError, WebSocket,
+    WebSocketError,
+};
 use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -43,6 +45,17 @@ impl Connector<WebSocket> {
         info!("Creating connector over websocket");
         Ok(Connector {
             connection: WebSocket::new(String::from(domain), credentials)?,
+            id_pool: (0..1000).collect(),
+        })
+    }
+}
+
+impl Connector<Uds> {
+    /// Create a connector using a unix domain socket.
+    pub fn unix_domain_socket(path: &str) -> Result<Self, ConnectorError> {
+        info!("Creating connector over unix domain socket");
+        Ok(Connector {
+            connection: Uds::new(String::from(path))?,
             id_pool: (0..1000).collect(),
         })
     }
@@ -144,6 +157,8 @@ pub enum ConnectorError {
     WsInit(#[from] WebSocketError),
     #[error("Connector Error: {0}")]
     HttpInit(#[from] HttpError),
+    #[error("Connector Error: {0}")]
+    UdsInit(#[from] UdsError),
     #[error("Connector Error: Maximum number of connections reached")]
     NoTicketId,
     #[error("Connector Error: {0}")]

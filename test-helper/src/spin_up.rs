@@ -9,7 +9,7 @@ use std::process::{Child, Command};
 pub enum ConnectorWrapper {
     Websocket(ConnectorNodeBundle<WebSocket>),
     Http(ConnectorNodeBundle<Http>),
-    // Uds(ConnectorNodeBundle<Uds>),
+    Uds(ConnectorNodeBundle<Uds>),
 }
 
 impl ConnectorWrapper {
@@ -20,7 +20,7 @@ impl ConnectorWrapper {
         {
             "http" => Self::Http(ConnectorNodeBundle::http()),
             "ws" => Self::Websocket(ConnectorNodeBundle::ws()),
-            // "uds" => Self::Uds(ConnectorNodeBundle::uds()),
+            "uds" => Self::Uds(ConnectorNodeBundle::uds()),
             _ => panic!("Please set environment variable 'CONNECTION'. Valid values are either 'http' or 'ws'"),
         }
     }
@@ -29,27 +29,29 @@ impl ConnectorWrapper {
         match self {
             Self::Websocket(connector) => connector.call(rpc),
             Self::Http(connector) => connector.call(rpc),
-            // Self::Uds(connector) => connector.call(rpc),
+            Self::Uds(connector) => connector.call(rpc),
         }
     }
 
     pub fn subscribe<U: DeserializeOwned + Debug + 'static>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Box<dyn DynNext<U>>, ConnectorError> {
+    ) -> Result<Box<dyn DynSubscription<U>>, ConnectorError> {
         match self {
             Self::Websocket(connector) => connector.subscribe(sub_request),
-            // Self::Uds(connector) => connector.subscribe(sub_request),
+            Self::Uds(connector) => connector.subscribe(sub_request),
             _ => panic!("Subscription not supported for this transport"),
         }
     }
 }
 
-pub trait DynNext<T: DeserializeOwned + Debug> {
+pub trait DynSubscription<T: DeserializeOwned + Debug> {
     fn next_item(&mut self) -> Result<T, SubscriptionError>;
 }
 
-impl<T: DeserializeOwned + Debug, U: Subscribe + Request> DynNext<T> for Subscription<T, U> {
+impl<T: DeserializeOwned + Debug, U: Subscribe + Request> DynSubscription<T>
+    for Subscription<T, U>
+{
     fn next_item(&mut self) -> Result<T, SubscriptionError> {
         self.next_item()
     }
@@ -71,9 +73,9 @@ impl<T: Subscribe + Request + 'static> ConnectorNodeBundle<T> {
     pub fn subscribe<U: DeserializeOwned + Debug + 'static>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Box<dyn DynNext<U>>, ConnectorError> {
+    ) -> Result<Box<dyn DynSubscription<U>>, ConnectorError> {
         let sub_result = self.connector.subscribe(sub_request);
-        sub_result.map(|el| Box::new(el) as Box<dyn DynNext<U>>)
+        sub_result.map(|el| Box::new(el) as Box<dyn DynSubscription<U>>)
     }
 }
 
@@ -91,6 +93,15 @@ impl ConnectorNodeBundle<Http> {
         let process = NodeProcess::new(None, None);
         let connector =
             Connector::http(&format!("http://127.0.0.1:{}", process.http_port), None).unwrap();
+        ConnectorNodeBundle { connector, process }
+    }
+}
+
+impl ConnectorNodeBundle<Uds> {
+    pub fn uds() -> Self {
+        // TODO: This is wrong and has to be implemented correctly
+        let process = NodeProcess::new(None, None);
+        let connector = Connector::unix_domain_socket("./nope").unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
