@@ -1,6 +1,6 @@
-use ethane::connector::Subscription;
+use ethane::connector::{Subscription, SubscriptionError};
 use ethane::rpc::{sub::SubscriptionRequest, Rpc};
-use ethane::transport::{Http, Request, Subscribe, WebSocket};
+use ethane::transport::{Http, Request, Subscribe, Uds, WebSocket};
 use ethane::{Connector, ConnectorError};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -9,6 +9,7 @@ use std::process::{Child, Command};
 pub enum ConnectorWrapper {
     Websocket(ConnectorNodeBundle<WebSocket>),
     Http(ConnectorNodeBundle<Http>),
+    // Uds(ConnectorNodeBundle<Uds>),
 }
 
 impl ConnectorWrapper {
@@ -19,28 +20,38 @@ impl ConnectorWrapper {
         {
             "http" => Self::Http(ConnectorNodeBundle::http()),
             "ws" => Self::Websocket(ConnectorNodeBundle::ws()),
+            // "uds" => Self::Uds(ConnectorNodeBundle::uds()),
             _ => panic!("Please set environment variable 'CONNECTION'. Valid values are either 'http' or 'ws'"),
         }
     }
 
-    pub fn call<U: DeserializeOwned + Debug + PartialEq>(
-        &mut self,
-        rpc: Rpc<U>,
-    ) -> Result<U, ConnectorError> {
+    pub fn call<U: DeserializeOwned + Debug>(&mut self, rpc: Rpc<U>) -> Result<U, ConnectorError> {
         match self {
             Self::Websocket(connector) => connector.call(rpc),
             Self::Http(connector) => connector.call(rpc),
+            // Self::Uds(connector) => connector.call(rpc),
         }
     }
 
-    pub fn subscribe<U: DeserializeOwned + Debug + PartialEq, T: Subscribe>(
+    pub fn subscribe<U: DeserializeOwned + Debug + 'static>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Subscription<U, T>, ConnectorError> {
+    ) -> Result<Box<dyn DynNext<U>>, ConnectorError> {
         match self {
             Self::Websocket(connector) => connector.subscribe(sub_request),
-            _ => unimplemented!(),
+            // Self::Uds(connector) => connector.subscribe(sub_request),
+            _ => panic!("Subscription not supported for this transport"),
         }
+    }
+}
+
+pub trait DynNext<T: DeserializeOwned + Debug> {
+    fn next_item(&mut self) -> Result<T, SubscriptionError>;
+}
+
+impl<T: DeserializeOwned + Debug, U: Subscribe + Request> DynNext<T> for Subscription<T, U> {
+    fn next_item(&mut self) -> Result<T, SubscriptionError> {
+        self.next_item()
     }
 }
 
@@ -51,24 +62,20 @@ pub struct ConnectorNodeBundle<T> {
 }
 
 impl<T: Request> ConnectorNodeBundle<T> {
-    fn call<U: DeserializeOwned + Debug + PartialEq>(
-        &mut self,
-        rpc: Rpc<U>,
-    ) -> Result<U, ConnectorError> {
+    fn call<U: DeserializeOwned + Debug>(&mut self, rpc: Rpc<U>) -> Result<U, ConnectorError> {
         self.connector.call(rpc)
     }
 }
 
-impl<T: Subscribe + Request> ConnectorNodeBundle<T> {
-    pub fn subscribe<U: DeserializeOwned + Debug>(
+impl<T: Subscribe + Request + 'static> ConnectorNodeBundle<T> {
+    pub fn subscribe<U: DeserializeOwned + Debug + 'static>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Subscription<U, T>, ConnectorError> {
-        self.connector.subscribe(sub_request)
+    ) -> Result<Box<dyn DynNext<U>>, ConnectorError> {
+        let sub_result = self.connector.subscribe(sub_request);
+        sub_result.map(|el| Box::new(el) as Box<dyn DynNext<U>>)
     }
 }
-
-impl<T> ConnectorNodeBundle<T> {}
 
 impl ConnectorNodeBundle<WebSocket> {
     pub fn ws() -> Self {

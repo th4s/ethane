@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 pub use self::http::{Http, HttpError};
+pub use uds::{Uds, UdsError};
 pub use websocket::{WebSocket, WebSocketError};
 mod http;
 mod uds;
