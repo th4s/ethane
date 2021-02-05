@@ -1,7 +1,7 @@
 //! Allows connecting to an ethereum node
 
 use crate::rpc::{sub::SubscriptionRequest, Rpc};
-use crate::transport::{Credentials, Request, TransportError};
+use crate::transport::{Credentials, Request, Subscribe, TransportError};
 use crate::transport::{Http, HttpError, WebSocket, WebSocketError};
 use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
@@ -46,19 +46,21 @@ impl Connector<WebSocket> {
             id_pool: (0..1000).collect(),
         })
     }
+}
 
+impl<T: Subscribe + Request> Connector<T> {
     /// Starts a new subscription.
     /// Use one of these rpc generating [functions](crate::rpc::sub) to provide the subscription request.
     /// Returns a [subscription](Subscription) which you can poll for new items.
     pub fn subscribe<U: DeserializeOwned + Debug>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Subscription<U>, ConnectorError> {
+    ) -> Result<Subscription<U, T>, ConnectorError> {
         info!("Starting a new subscription");
-        let mut connector = Connector::websocket(
-            &self.connection.address,
-            self.connection.credentials.clone(),
-        )?;
+        let mut connector = Connector {
+            connection: self.connection.fork()?,
+            id_pool: self.id_pool.clone(),
+        };
         let subscription_id = connector.call(sub_request.rpc)?;
         Ok(Subscription {
             id: subscription_id,

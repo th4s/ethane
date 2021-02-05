@@ -17,10 +17,6 @@ impl Uds {
             stream: UnixStream::connect(path).map_err(UdsError::UdsInit)?,
         })
     }
-
-    pub(crate) fn read(&mut self) {
-        todo!()
-    }
 }
 
 impl Drop for Uds {
@@ -40,4 +36,6 @@ pub enum UdsError {
     UdsInit(std::io::Error),
     #[error("Uds Error: {0}")]
     UdsClose(std::io::Error),
+    #[error("Uds Error: {0}")]
+    Read(std::io::Error),
 }

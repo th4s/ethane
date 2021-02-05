@@ -8,9 +8,17 @@ mod http;
 mod uds;
 mod websocket;
 
-///Implemented by transports which offer request functionality
+/// Implemented by transports which offer request functionality
 pub trait Request {
     fn request(&mut self, cmd: String) -> Result<String, TransportError>;
+}
+
+/// Trait for transports which offer subscriptions
+pub trait Subscribe {
+    fn read_next(&mut self) -> Result<String, TransportError>;
+    fn fork(&self) -> Result<Self, TransportError>
+    where
+        Self: Sized;
 }
 
 /// Credentials can be used for authentication

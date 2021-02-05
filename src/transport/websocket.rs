@@ -1,5 +1,5 @@
 use super::Credentials;
-use super::{Request, TransportError};
+use super::{Request, Subscribe, TransportError};
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};
 use std::borrow::Cow;
@@ -70,6 +70,16 @@ impl Request for WebSocket {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
         let _write = self.write(Message::Text(cmd))?;
         self.read_message().map_err(TransportError::from)
+    }
+}
+
+impl Subscribe for WebSocket {
+    fn read_next(&mut self) -> Result<String, TransportError> {
+        self.read_message().map_err(TransportError::from)
+    }
+
+    fn fork(&self) -> Result<Self, TransportError> {
+        Self::new(self.address.clone(), self.credentials.clone()).map_err(TransportError::from)
     }
 }
 

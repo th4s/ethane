@@ -1,6 +1,6 @@
 use ethane::connector::Subscription;
 use ethane::rpc::{sub::SubscriptionRequest, Rpc};
-use ethane::transport::{Http, Request, WebSocket};
+use ethane::transport::{Http, Request, Subscribe, WebSocket};
 use ethane::{Connector, ConnectorError};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -33,10 +33,10 @@ impl ConnectorWrapper {
         }
     }
 
-    pub fn subscribe<U: DeserializeOwned + Debug>(
+    pub fn subscribe<U: DeserializeOwned + Debug + PartialEq, T: Subscribe>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Subscription<U>, ConnectorError> {
+    ) -> Result<Subscription<U, T>, ConnectorError> {
         match self {
             Self::Websocket(connector) => connector.subscribe(sub_request),
             _ => unimplemented!(),
@@ -45,7 +45,7 @@ impl ConnectorWrapper {
 }
 
 #[allow(dead_code)]
-pub struct ConnectorNodeBundle<T: Request> {
+pub struct ConnectorNodeBundle<T> {
     connector: Connector<T>,
     process: NodeProcess,
 }
@@ -59,14 +59,16 @@ impl<T: Request> ConnectorNodeBundle<T> {
     }
 }
 
-impl ConnectorNodeBundle<WebSocket> {
+impl<T: Subscribe + Request> ConnectorNodeBundle<T> {
     pub fn subscribe<U: DeserializeOwned + Debug>(
         &mut self,
         sub_request: SubscriptionRequest<U>,
-    ) -> Result<Subscription<U>, ConnectorError> {
+    ) -> Result<Subscription<U, T>, ConnectorError> {
         self.connector.subscribe(sub_request)
     }
 }
+
+impl<T> ConnectorNodeBundle<T> {}
 
 impl ConnectorNodeBundle<WebSocket> {
     pub fn ws() -> Self {
