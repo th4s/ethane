@@ -2,8 +2,12 @@ use ethane::connector::{Subscription, SubscriptionError};
 use ethane::rpc::{sub::SubscriptionRequest, Rpc};
 use ethane::transport::{Http, Request, Subscribe, Uds, WebSocket};
 use ethane::{Connector, ConnectorError};
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use regex::{Regex, RegexBuilder};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
+use std::io::{BufRead, BufReader};
 use std::process::{Child, Command};
 
 pub enum ConnectorWrapper {
@@ -15,7 +19,7 @@ pub enum ConnectorWrapper {
 impl ConnectorWrapper {
     pub fn new_from_env() -> ConnectorWrapper {
         match std::env::var("CONNECTION")
-            .unwrap_or_else(|_| String::from("http"))
+            .unwrap_or_else(|_| String::from("ws"))
             .as_str()
         {
             "http" => Self::Http(ConnectorNodeBundle::http()),
@@ -81,70 +85,121 @@ impl<T: Subscribe + Request + 'static> ConnectorNodeBundle<T> {
 
 impl ConnectorNodeBundle<WebSocket> {
     pub fn ws() -> Self {
-        let process = NodeProcess::new(None, None);
-        let connector =
-            Connector::websocket(&format!("ws://127.0.0.1:{}", process.ws_port), None).unwrap();
+        let process = NodeProcess::new_ws("0");
+        let connector = Connector::websocket(&format!("ws://{}", process.address), None).unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
 
 impl ConnectorNodeBundle<Http> {
     pub fn http() -> Self {
-        let process = NodeProcess::new(None, None);
-        let connector =
-            Connector::http(&format!("http://127.0.0.1:{}", process.http_port), None).unwrap();
+        let process = NodeProcess::new_http("0");
+        let connector = Connector::http(&format!("http://{}", process.address), None).unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
 
 impl ConnectorNodeBundle<Uds> {
     pub fn uds() -> Self {
-        // TODO: This is wrong and has to be implemented correctly
-        let process = NodeProcess::new(None, None);
-        let connector = Connector::unix_domain_socket("./nope").unwrap();
+        let process = NodeProcess::new_uds(None);
+        dbg!(&process.address);
+        let connector = Connector::unix_domain_socket(&process.address).unwrap();
         ConnectorNodeBundle { connector, process }
     }
 }
 
 pub struct NodeProcess {
-    pub http_port: u16,
-    pub ws_port: u16,
-    cmd: Child,
+    pub address: String,
+    process: Child,
 }
 
 impl NodeProcess {
-    pub fn new(mut http_port: Option<u16>, mut ws_port: Option<u16>) -> Self {
-        if http_port.is_none() {
-            http_port = Some(port_scanner::request_open_port().expect("No port available"));
-        }
-        if ws_port.is_none() {
-            ws_port = Some(port_scanner::request_open_port().expect("No port available"));
-        }
+    pub fn new_http(port: &str) -> Self {
+        let regex = RegexBuilder::new(r"HTTP server started\s+endpoint=([0-9.:]+)")
+            .build()
+            .unwrap();
+        let cmd = vec![
+            "--http".to_string(),
+            "--http.api".to_string(),
+            "personal,eth,net,web3,txpool".to_string(),
+            "--http.port".to_string(),
+            port.to_string(),
+            "--allow-insecure-unlock".to_string(),
+        ];
+        Self::new(cmd, regex)
+    }
 
-        let cmd = Command::new("geth")
-            .args(&[
-                "--dev",
-                "--ws",
-                "--ws.api",
-                "personal,eth,net,web3,txpool",
-                "--ws.port",
-                &ws_port.unwrap().to_string(),
-                "--http",
-                "--http.api",
-                "personal,eth,net,web3,txpool",
-                "--http.port",
-                &http_port.unwrap().to_string(),
-                "--allow-insecure-unlock",
-            ])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+    pub fn new_ws(port: &str) -> Self {
+        println!("new_ws executed");
+        let regex = RegexBuilder::new(r"WebSocket enabled\s+url=ws://([0-9.:]+)")
+            .build()
+            .unwrap();
+        let cmd = vec![
+            "--ws".to_string(),
+            "--ws.api".to_string(),
+            "personal,eth,net,web3,txpool".to_string(),
+            "--ws.port".to_string(),
+            port.to_string(),
+            "--allow-insecure-unlock".to_string(),
+        ];
+        Self::new(cmd, regex)
+    }
+
+    // TODO: Make OS independent
+    pub fn new_uds(path: Option<&str>) -> Self {
+        let regex = RegexBuilder::new(r"IPC endpoint opened\s+url=([a-z0-9/\\:]+.ipc)")
+            .build()
+            .unwrap();
+        let mut cmd = vec!["--ipcpath".to_string()];
+
+        if let Some(ipc_path) = path {
+            cmd.push(ipc_path.to_string());
+        } else {
+            let mut rng = thread_rng();
+            let chars = std::iter::repeat(())
+                .map(|()| rng.sample(Alphanumeric))
+                .map(char::from)
+                .take(8)
+                .collect::<String>()
+                .to_lowercase();
+
+            let ipc_path = String::from("/tmp/geth") + &chars + ".ipc";
+            cmd.push(ipc_path)
+        }
+        Self::new(cmd, regex)
+    }
+
+    fn new(settings: Vec<String>, regex: Regex) -> Self {
+        let mut cmd = vec!["--dev".to_string()];
+        cmd.extend(settings);
+        let mut geth = Command::new("geth")
+            .args(cmd)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
             .spawn()
             .expect("Unable to start local geth node for integration tests. Is geth installed?");
-        std::thread::sleep(std::time::Duration::from_secs(5));
+
+        let mut reader = BufReader::new(geth.stderr.take().unwrap());
+        let mut buffer = String::new();
+        let mut parsed = String::new();
+        loop {
+            reader.read_line(&mut buffer).unwrap();
+            for capture in regex.captures_iter(&buffer) {
+                if let Some(cap) = capture.get(1) {
+                    parsed = cap.as_str().to_string();
+                }
+            }
+            if !parsed.is_empty() {
+                break;
+            }
+        }
+
+        // For some reason the process dies, if we drop stderr. This is why we need to reattach it here
+        geth.stderr = Some(reader.into_inner());
+
         NodeProcess {
-            cmd,
-            http_port: http_port.unwrap(),
-            ws_port: ws_port.unwrap(),
+            address: parsed,
+            process: geth,
         }
     }
 }
@@ -153,10 +208,10 @@ impl Drop for NodeProcess {
     fn drop(&mut self) {
         let e_message = format!(
             "Unable to tear down eth node. Please kill PID {} manually.",
-            self.cmd.id()
+            self.process.id()
         );
         let mut cmd = Command::new("kill");
-        if let Ok(mut child) = cmd.arg(self.cmd.id().to_string()).spawn() {
+        if let Ok(mut child) = cmd.arg(self.process.id().to_string()).spawn() {
             if !child.wait().expect(&e_message).success() {
                 println!("{}", &e_message);
             }

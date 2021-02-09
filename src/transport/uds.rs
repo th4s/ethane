@@ -44,8 +44,9 @@ impl Uds {
         trace!("Writing to Unix domain socket: {}", &message);
         let _write = self
             .write_stream
-            .write(message.as_bytes())
+            .write_all(message.as_bytes())
             .map_err(UdsError::Write)?;
+        let _flush = self.write_stream.flush().map_err(UdsError::Write)?;
         Ok(())
     }
 }

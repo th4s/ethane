@@ -19,7 +19,7 @@
 //! use ethane::rpc::eth_get_balance;
 //! use ethane::types::H160;
 //! # use test_helper::NodeProcess;
-//! # let node = NodeProcess::new(Some(8545), Some(8547));
+//! # let node = NodeProcess::new_http("8545");
 //!
 //! // Start up connector
 //! let node_endpoint = "http://127.0.0.1:8545";
@@ -38,7 +38,7 @@
 //! # use ethane::rpc::{eth_send_transaction, eth_coinbase};
 //! # use ethane::types::{TransactionRequest, H160, U256};
 //!
-//! # let node = NodeProcess::new(Some(8544), Some(8546));
+//! # let node = NodeProcess::new_ws("8546");
 //!
 //! // Start up connector with websockets
 //! let node_endpoint = "ws://127.0.0.1:8546";
