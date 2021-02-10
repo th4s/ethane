@@ -60,7 +60,10 @@
 //! ```
 
 pub use connector::{Connector, ConnectorError};
-pub use transport::Credentials;
+pub use transport::{Credentials, Http, WebSocket};
+
+#[cfg(target_family = "unix")]
+pub use transport::Uds;
 
 pub mod connector;
 pub mod rpc;

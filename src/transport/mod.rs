@@ -3,9 +3,11 @@
 use thiserror::Error;
 
 pub use self::http::{Http, HttpError};
+#[cfg(target_family = "unix")]
 pub use uds::{Uds, UdsError};
 pub use websocket::{WebSocket, WebSocketError};
 mod http;
+#[cfg(target_family = "unix")]
 mod uds;
 mod websocket;
 
@@ -51,6 +53,7 @@ pub enum TransportError {
     WebSocketError(#[from] websocket::WebSocketError),
     #[error("{0}")]
     HttpError(#[from] http::HttpError),
+    #[cfg(target_family = "unix")]
     #[error("{0}")]
     UdsError(#[from] uds::UdsError),
 }

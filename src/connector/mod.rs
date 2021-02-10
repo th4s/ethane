@@ -50,6 +50,7 @@ impl Connector<WebSocket> {
     }
 }
 
+#[cfg(target_family = "unix")]
 impl Connector<Uds> {
     /// Create a connector using a unix domain socket.
     pub fn unix_domain_socket(path: &str) -> Result<Self, ConnectorError> {
@@ -157,6 +158,7 @@ pub enum ConnectorError {
     WsInit(#[from] WebSocketError),
     #[error("Connector Http Init Error: {0}")]
     HttpInit(#[from] HttpError),
+    #[cfg(target_family = "unix")]
     #[error("Connector Unix Domain Socket Init Error: {0}")]
     UdsInit(#[from] UdsError),
     #[error("Connector Error: Maximum number of connections reached")]

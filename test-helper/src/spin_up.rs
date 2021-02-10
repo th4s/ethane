@@ -13,6 +13,7 @@ use std::process::{Child, Command};
 pub enum ConnectorWrapper {
     Websocket(ConnectorNodeBundle<WebSocket>),
     Http(ConnectorNodeBundle<Http>),
+    #[cfg(target_family = "unix")]
     Uds(ConnectorNodeBundle<Uds>),
 }
 
@@ -24,7 +25,11 @@ impl ConnectorWrapper {
         {
             "http" => Self::Http(ConnectorNodeBundle::http()),
             "ws" => Self::Websocket(ConnectorNodeBundle::ws()),
+            #[cfg(target_family = "unix")]
             "uds" => Self::Uds(ConnectorNodeBundle::uds()),
+            #[cfg(target_family = "unix")]
+            _ => panic!("Please set environment variable 'CONNECTION'. Valid values are either 'http', 'ws' or 'uds'"),
+            #[cfg(not(target_family = "unix"))]
             _ => panic!("Please set environment variable 'CONNECTION'. Valid values are either 'http' or 'ws'"),
         }
     }
@@ -33,6 +38,7 @@ impl ConnectorWrapper {
         match self {
             Self::Websocket(connector) => connector.call(rpc),
             Self::Http(connector) => connector.call(rpc),
+            #[cfg(target_family = "unix")]
             Self::Uds(connector) => connector.call(rpc),
         }
     }
@@ -43,6 +49,7 @@ impl ConnectorWrapper {
     ) -> Result<Box<dyn DynSubscription<U>>, ConnectorError> {
         match self {
             Self::Websocket(connector) => connector.subscribe(sub_request),
+            #[cfg(target_family = "unix")]
             Self::Uds(connector) => connector.subscribe(sub_request),
             _ => panic!("Subscription not supported for this transport"),
         }
@@ -99,6 +106,7 @@ impl ConnectorNodeBundle<Http> {
     }
 }
 
+#[cfg(target_family = "unix")]
 impl ConnectorNodeBundle<Uds> {
     pub fn uds() -> Self {
         let process = NodeProcess::new_uds(None);
@@ -145,7 +153,7 @@ impl NodeProcess {
         Self::new(cmd, regex)
     }
 
-    // TODO: Make OS independent
+    #[cfg(target_family = "unix")]
     pub fn new_uds(path: Option<&str>) -> Self {
         let regex = RegexBuilder::new(r"IPC endpoint opened\s+url=([a-z0-9/\\:_]+.ipc)")
             .build()
