@@ -91,11 +91,12 @@ fn test_eth_subscribe_logs() {
     }
 }
 
-// This is hard to test in development mode
+// This is hard to test in geth dev mode
 #[test]
 #[ignore]
 fn test_eth_subscribe_syncing() {
     let mut client = ConnectorWrapper::new_from_env();
     let mut subscription = client.subscribe(eth_subscribe_syncing()).unwrap();
     let _sync_info_sub = subscription.next_item().unwrap();
+    assert!(true);
 }

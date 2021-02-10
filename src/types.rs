@@ -61,7 +61,7 @@ pub struct Transaction {
     pub block_hash: Option<H256>,
     #[serde(rename = "blockNumber")]
     pub block_number: Option<U64>,
-    pub from: H160,
+    pub from: Option<H160>,
     pub gas: U256,
     #[serde(rename = "gasPrice")]
     pub gas_price: U256,
@@ -395,6 +395,13 @@ pub struct SyncStatus {
     pub pulled_states: Option<u64>,
     #[serde(rename = "knownStates")]
     pub known_states: Option<u64>,
+}
+
+/// A wrapper for a signed transaction
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct SignedTransaction {
+    pub raw: Bytes,
+    pub tx: Transaction,
 }
 
 #[cfg(test)]

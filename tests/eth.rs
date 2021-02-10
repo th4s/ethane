@@ -1,7 +1,6 @@
 use ethane::rpc;
 use ethane::types::{
-    BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, H64, U128,
-    U256, U64,
+    BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, U256, U64,
 };
 use std::path::Path;
 use std::str::FromStr;
@@ -347,34 +346,37 @@ fn test_eth_sign() {
 // c.f. https://github.com/ethereum/go-ethereum/issues/22223
 // also geth returns something like: {raw: hex_encoded_tx, tx: json_encoded_tx}, however according to JSON RPC
 // it should return only the transaction hash
+//
+// We decide here to use what geth currently does and not follow the spec
 #[test]
-#[ignore]
 fn test_eth_sign_transaction() {
     let mut client = ConnectorWrapper::new_from_env();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         to: Some(create_account(&mut client).1),
+        gas: Some(U256::exp10(5)),
+        gas_price: Some(U256::exp10(9)),
         value: Some(U256::zero()),
+        nonce: Some(U256::zero()),
         ..Default::default()
     };
     rpc_call_test_some(&mut client, rpc::eth_sign_transaction(transaction));
 }
 
 #[test]
-#[ignore]
 fn test_eth_send_raw_transaction() {
     let mut client = ConnectorWrapper::new_from_env();
     let transaction = TransactionRequest {
         from: create_account(&mut client).1,
         to: Some(create_account(&mut client).1),
-        gas: Some(U256::exp10(12)),
-        gas_price: Some(U256::exp10(3)),
+        gas: Some(U256::exp10(5)),
+        gas_price: Some(U256::exp10(9)),
         value: Some(U256::zero()),
         nonce: Some(U256::zero()),
         ..Default::default()
     };
     let raw_tx = client.call(rpc::eth_sign_transaction(transaction)).unwrap();
-    rpc_call_test_some(&mut client, rpc::eth_send_raw_transaction(raw_tx));
+    rpc_call_test_some(&mut client, rpc::eth_send_raw_transaction(raw_tx.raw));
 }
 
 #[test]
@@ -516,7 +518,7 @@ fn test_eth_get_uncle_by_block_number_and_index() {
 }
 
 // DEVIATION FROM SPEC
-// This test fails with geth because the method is not available
+// Not supported by geth
 #[test]
 #[ignore]
 fn test_eth_get_compilers() {
@@ -524,7 +526,7 @@ fn test_eth_get_compilers() {
 }
 
 // DEVIATION FROM SPEC
-// This test fails with geth because the method is not available
+// Not supported by geth
 #[test]
 #[ignore]
 fn test_eth_compile_lll() {
@@ -532,7 +534,7 @@ fn test_eth_compile_lll() {
 }
 
 // DEVIATION FROM SPEC
-// This test fails with geth because the method is not available
+// Not supported by geth
 #[test]
 #[ignore]
 fn test_eth_compile_solidity() {
@@ -540,7 +542,7 @@ fn test_eth_compile_solidity() {
 }
 
 // DEVIATION FROM SPEC
-// This test fails with geth because the method is not available
+// Not supported by geth
 #[test]
 #[ignore]
 fn test_eth_compile_serpent() {
@@ -613,10 +615,7 @@ fn test_eth_get_filter_changes_new_filter() {
     };
     let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
     wait_for_transaction(&mut client, tx_hash);
-    rpc_call_test_some(
-        &mut client,
-        rpc::eth_get_filter_changes(U128::from(filter_id)),
-    );
+    rpc_call_test_some(&mut client, rpc::eth_get_filter_changes(filter_id));
 }
 
 #[test]
@@ -634,11 +633,41 @@ fn test_eth_get_filter_changes_block_filter() {
     rpc_call_test_some(&mut client, rpc::eth_get_filter_changes(filter_id));
 }
 
-// DEVIATION FROM SPEC
+#[test]
+fn test_eth_get_filter_logs_new_filter() {
+    let mut client = ConnectorWrapper::new_from_env();
+    let address = create_account(&mut client).1;
+    let (contract_address, _) = deploy_contract(
+        &mut client,
+        address,
+        &Path::new(TEST_CONTRACT_PATH),
+        TEST_CONTRACT_NAME,
+    );
+    let topic = keccak(b"Solution(uint256)");
+    let filter = Filter {
+        from_block: Some(BlockParameter::Earliest),
+        to_block: Some(BlockParameter::Latest),
+        address: Some(ValueOrVec::Value(contract_address)),
+        topics: Some(vec![Some(ValueOrVec::Value(H256::from_slice(&topic)))]),
+    };
+    let filter_id = client.call(rpc::eth_new_filter(filter)).unwrap();
+    let out = keccak(b"set_pos0()");
+    let tx = TransactionRequest {
+        from: create_account(&mut client).1,
+        to: Some(contract_address),
+        data: Some(Bytes::from_slice(&out[..4])),
+        ..Default::default()
+    };
+    let tx_hash = client.call(rpc::eth_send_transaction(tx)).unwrap();
+    wait_for_transaction(&mut client, tx_hash);
+    rpc_call_test_some(&mut client, rpc::eth_get_filter_logs(filter_id));
+}
+
 // This does not seem to work, although this is very similar to the test eth_get_filter_changes_block_filter
+// c.f. https://github.com/ethereum-oasis/eth1.x-JSON-RPC-API-standard/issues/5#issuecomment-773132429 number 5
 #[test]
 #[ignore]
-fn test_eth_get_filter_logs() {
+fn test_eth_get_filter_logs_block_filter() {
     let mut client = ConnectorWrapper::new_from_env();
     let tx = TransactionRequest {
         from: create_account(&mut client).1,
@@ -685,36 +714,22 @@ fn test_eth_get_logs() {
 // Not supported by geth
 #[test]
 #[ignore]
-#[allow(deprecated)]
 fn test_eth_get_work() {
-    let mut client = ConnectorWrapper::new_from_env();
-    rpc_call_test_some(&mut client, rpc::eth_get_work());
+    assert!(false, "This RPC is not supported anymore.");
 }
 
 // DEVIATION FROM SPEC
 // Not supported by geth
 #[test]
 #[ignore]
-#[allow(deprecated)]
 fn test_eth_submit_work() {
-    let mut client = ConnectorWrapper::new_from_env();
-    rpc_call_test_expected(
-        &mut client,
-        rpc::eth_submit_work(H64::zero(), H256::zero(), H256::zero()),
-        false,
-    );
+    assert!(false, "This RPC is not supported anymore.");
 }
 
 // DEVIATION FROM SPEC
 // Not supported by geth
 #[test]
 #[ignore]
-#[allow(deprecated)]
 fn test_eth_submit_hashrate() {
-    let mut client = ConnectorWrapper::new_from_env();
-    rpc_call_test_expected(
-        &mut client,
-        rpc::eth_submit_hashrate(H256::zero(), H256::zero()),
-        false,
-    );
+    assert!(false, "This RPC is not supported anymore.");
 }

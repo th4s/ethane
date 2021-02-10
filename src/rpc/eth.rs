@@ -1,7 +1,7 @@
 use super::Rpc;
 use crate::types::{
-    Block, BlockParameter, Bytes, Call, Filter, GasCall, HashOrLog, SyncInfo, Transaction,
-    TransactionReceipt, TransactionRequest, H160, H256, H64, U128, U256, U64,
+    Block, BlockParameter, Bytes, Call, Filter, GasCall, HashOrLog, SignedTransaction, SyncInfo,
+    Transaction, TransactionReceipt, TransactionRequest, H160, H256, H64, U128, U256, U64,
 };
 
 pub fn eth_protocol_version() -> Rpc<String> {
@@ -139,7 +139,9 @@ pub fn eth_sign(address: H160, data: Bytes) -> Rpc<Bytes> {
 // c.f. https://github.com/ethereum/go-ethereum/issues/22223
 // also geth returns something like: {raw: hex_encoded_tx, tx: json_encoded_tx}, however according to JSON RPC
 // it should return only the transaction hash
-pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<Bytes> {
+//
+// We decide here to use what geth currently does and not follow the spec
+pub fn eth_sign_transaction(transaction: TransactionRequest) -> Rpc<SignedTransaction> {
     let mut rpc = Rpc::new("eth_signTransaction");
     rpc.add_param(transaction);
     rpc
@@ -217,6 +219,7 @@ pub fn eth_get_uncle_by_block_number_and_index(
 }
 
 // DEVIATION FROM SPEC
+// Not supported by geth
 // c.f. https://github.com/ethereum/EIPs/issues/209
 #[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
 pub fn eth_get_compilers() -> Rpc<Vec<String>> {
@@ -224,6 +227,7 @@ pub fn eth_get_compilers() -> Rpc<Vec<String>> {
 }
 
 // DEVIATION FROM SPEC
+// Not supported by geth
 // c.f. https://github.com/ethereum/EIPs/issues/209
 #[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
 pub fn eth_compile_lll(source_code: String) -> Rpc<Bytes> {
@@ -233,6 +237,7 @@ pub fn eth_compile_lll(source_code: String) -> Rpc<Bytes> {
 }
 
 // DEVIATION FROM SPEC
+// Not supported by geth
 // c.f. https://github.com/ethereum/EIPs/issues/209
 #[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
 pub fn eth_compile_solidity(source_code: String) -> Rpc<Bytes> {
@@ -242,6 +247,7 @@ pub fn eth_compile_solidity(source_code: String) -> Rpc<Bytes> {
 }
 
 // DEVIATION FROM SPEC
+// Not supported by geth
 // c.f. https://github.com/ethereum/EIPs/issues/209
 #[deprecated(note = "This functionality seems to be not provided anymore by ethereum nodes.")]
 pub fn eth_compile_serpent(source_code: String) -> Rpc<Bytes> {
