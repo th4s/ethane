@@ -2,9 +2,12 @@
 
 use crate::rpc::{sub::SubscriptionRequest, Rpc};
 use crate::transport::{
-    Credentials, Http, HttpError, Request, Subscribe, TransportError, Uds, UdsError, WebSocket,
-    WebSocketError,
+    Credentials, Http, HttpError, Request, Subscribe, TransportError, WebSocket, WebSocketError,
 };
+
+#[cfg(target_family = "unix")]
+use crate::transport::{Uds, UdsError};
+
 use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;

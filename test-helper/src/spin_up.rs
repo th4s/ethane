@@ -1,8 +1,12 @@
 use ethane::connector::{Subscription, SubscriptionError};
 use ethane::rpc::{sub::SubscriptionRequest, Rpc};
-use ethane::transport::{Http, Request, Subscribe, Uds, WebSocket};
+#[cfg(target_family = "unix")]
+use ethane::transport::Uds;
+use ethane::transport::{Http, Request, Subscribe, WebSocket};
 use ethane::{Connector, ConnectorError};
+#[cfg(target_family = "unix")]
 use rand::distributions::Alphanumeric;
+#[cfg(target_family = "unix")]
 use rand::{thread_rng, Rng};
 use regex::{Regex, RegexBuilder};
 use serde::de::DeserializeOwned;
