@@ -57,10 +57,10 @@ fn deserialize_from_sub<U: DeserializeOwned + Debug>(
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum SubscriptionError {
-    #[error("Subscription Error {0}")]
+    #[error("Subscription Transport Error {0}")]
     Read(#[from] TransportError),
-    #[error("Subscription Error: Error during canceling subscription: {0}")]
+    #[error("Subscription Error during canceling subscription: {0}")]
     Cancel(#[from] ConnectorError),
-    #[error("Subscription Error: {0}")]
+    #[error("Subscription De-/Serialization Error: {0}")]
     Serde(#[from] serde_json::Error),
 }

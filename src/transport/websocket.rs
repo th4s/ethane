@@ -109,15 +109,15 @@ fn create_handshake_request(
 /// An error type collecting what can go wrong with a websocket
 #[derive(Debug, Error)]
 pub enum WebSocketError {
-    #[error("WebSocketError: {0}")]
+    #[error("WebSocket Error: {0}")]
     Tungstenite(#[from] tungstenite::Error),
-    #[error("WebSocketError: {0}")]
+    #[error("WebSocket Invalid Handshake Request Error: {0}")]
     Http(#[from] http::Error),
-    #[error("WebSocketError: {0}")]
+    #[error("WebSocket Invalid Address Error: {0}")]
     Url(#[from] http::uri::InvalidUri),
-    #[error("WebSocketError: HandshakeError")]
+    #[error("WebSocket Handshake Header Error")]
     Handshake,
-    #[error("WebSocketError: {0}")]
+    #[error("WebSocket Error. Unable to parse credentials {0}")]
     InvalidHeader(#[from] http::header::InvalidHeaderValue),
 }
 

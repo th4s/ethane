@@ -78,20 +78,61 @@ impl Drop for Uds {
         if let Err(err) = close {
             error!("{}", err);
         }
+
+        let delete = std::fs::remove_file(&self.path);
+        if let Err(err) = delete {
+            error!("{}", err);
+        }
     }
 }
 
 /// An error type collecting what can go wrong with unix domain sockets
 #[derive(Debug, Error)]
 pub enum UdsError {
-    #[error("Uds Error: {0}")]
+    #[error("Unix Domain Socket Init Error: {0}")]
     UdsInit(std::io::Error),
-    #[error("Uds Error: {0}")]
+    #[error("Unix Domain Socket Close Error: {0}")]
     UdsClose(std::io::Error),
-    #[error("Uds Error: {0}")]
+    #[error("Unix Domain Socket Read Error: {0}")]
     Read(std::io::Error),
-    #[error("Uds Error: {0}")]
+    #[error("Unix Domain Socket Utf8 Error: {0}")]
     Utf8(std::str::Utf8Error),
-    #[error("Uds Error: {0}")]
+    #[error("Unix Domain Socket Write Error: {0}")]
     Write(std::io::Error),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::net::UnixListener;
+
+    const TEST_IPC: &str = "/tmp/ethane_test.ipc";
+
+    fn spawn_test_uds_server() {
+        let unix_listener = UnixListener::bind(TEST_IPC).unwrap();
+        std::thread::spawn(move || {
+            for incoming in unix_listener.incoming() {
+                match incoming {
+                    Ok(mut stream) => {
+                        let mut buffer = Vec::<u8>::new();
+                        let mut reader = BufReader::new(&mut stream);
+
+                        let _read = reader.read_until(b'}', &mut buffer).unwrap();
+                        let _write = (&mut stream).write_all(buffer.as_slice()).unwrap();
+                        let _flush = (&mut stream).flush().unwrap();
+                    }
+                    Err(err) => panic!(err),
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_uds() {
+        spawn_test_uds_server();
+        let message = "{\"test\": true}";
+        let mut uds = Uds::new(TEST_IPC.to_string()).unwrap();
+        let _write = uds.write(String::from(message)).unwrap();
+        assert_eq!(uds.read_json().unwrap(), message);
+    }
 }

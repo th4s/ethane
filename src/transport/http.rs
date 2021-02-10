@@ -56,11 +56,11 @@ impl Request for Http {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum HttpError {
-    #[error("HttpError: {0}")]
+    #[error("Http Address Error: {0}")]
     Uri(#[from] http::uri::InvalidUri),
-    #[error("HttpError: {0}")]
+    #[error("Http Response Parsing Error: {0}")]
     Conversion(#[from] std::io::Error),
-    #[error("HttpError: {0}")]
+    #[error("Http Send Request Error: {0}")]
     UreqError(#[from] UreqError),
 }
 

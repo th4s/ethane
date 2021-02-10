@@ -153,18 +153,18 @@ enum RpcResult<T> {
 /// An error type collecting what can go wrong using a connector
 #[derive(Debug, Error)]
 pub enum ConnectorError {
-    #[error("Connector Error: {0}")]
+    #[error("Connector Websocket Init Error: {0}")]
     WsInit(#[from] WebSocketError),
-    #[error("Connector Error: {0}")]
+    #[error("Connector Http Init Error: {0}")]
     HttpInit(#[from] HttpError),
-    #[error("Connector Error: {0}")]
+    #[error("Connector Unix Domain Socket Init Error: {0}")]
     UdsInit(#[from] UdsError),
     #[error("Connector Error: Maximum number of connections reached")]
     NoTicketId,
-    #[error("Connector Error: {0}")]
+    #[error("Connector Transport Error: {0}")]
     Transport(#[from] TransportError),
-    #[error("Connector Error: {0:?}")]
+    #[error("Node Response Error: {0:?}")]
     JsonRpc(#[from] JsonError),
-    #[error("Connector Error: {0}")]
+    #[error("Connector De-/Serialization Error: {0}")]
     Serde(#[from] serde_json::Error),
 }
