@@ -102,7 +102,6 @@ impl ConnectorNodeBundle<Http> {
 impl ConnectorNodeBundle<Uds> {
     pub fn uds() -> Self {
         let process = NodeProcess::new_uds(None);
-        dbg!(&process.address);
         let connector = Connector::unix_domain_socket(&process.address).unwrap();
         ConnectorNodeBundle { connector, process }
     }
@@ -125,12 +124,12 @@ impl NodeProcess {
             "--http.port".to_string(),
             port.to_string(),
             "--allow-insecure-unlock".to_string(),
+            "--ipcdisable".to_string(),
         ];
         Self::new(cmd, regex)
     }
 
     pub fn new_ws(port: &str) -> Self {
-        println!("new_ws executed");
         let regex = RegexBuilder::new(r"WebSocket enabled\s+url=ws://([0-9.:]+)")
             .build()
             .unwrap();
@@ -141,13 +140,14 @@ impl NodeProcess {
             "--ws.port".to_string(),
             port.to_string(),
             "--allow-insecure-unlock".to_string(),
+            "--ipcdisable".to_string(),
         ];
         Self::new(cmd, regex)
     }
 
     // TODO: Make OS independent
     pub fn new_uds(path: Option<&str>) -> Self {
-        let regex = RegexBuilder::new(r"IPC endpoint opened\s+url=([a-z0-9/\\:]+.ipc)")
+        let regex = RegexBuilder::new(r"IPC endpoint opened\s+url=([a-z0-9/\\:_]+.ipc)")
             .build()
             .unwrap();
         let mut cmd = vec!["--ipcpath".to_string()];
@@ -163,7 +163,7 @@ impl NodeProcess {
                 .collect::<String>()
                 .to_lowercase();
 
-            let ipc_path = String::from("/tmp/geth") + &chars + ".ipc";
+            let ipc_path = String::from("/tmp/geth_") + &chars + ".ipc";
             cmd.push(ipc_path)
         }
         Self::new(cmd, regex)

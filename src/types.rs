@@ -396,3 +396,64 @@ pub struct SyncStatus {
     #[serde(rename = "knownStates")]
     pub known_states: Option<u64>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_types_bytes() {
+        let bytes_0 = Bytes::from_slice(&[]);
+        let bytes_1 = Bytes::from_slice(&[0, 0]);
+        let bytes_2 = Bytes::from_slice(&[17, 234]);
+        let bytes_3 = Bytes::from_str("0x").unwrap();
+        let bytes_4 = Bytes::from_str("0x00").unwrap();
+        let bytes_5 = Bytes::from_str("00421100").unwrap();
+
+        let expected_0 = "\"0x\"";
+        let expected_1 = "\"0x0000\"";
+        let expected_2 = "\"0x11ea\"";
+        let expected_3 = Bytes(vec![]);
+        let expected_4 = Bytes(vec![0]);
+        let expected_5 = Bytes(vec![0, 66, 17, 0]);
+
+        assert_eq!(serde_json::to_string(&bytes_0).unwrap(), expected_0);
+        assert_eq!(serde_json::to_string(&bytes_1).unwrap(), expected_1);
+        assert_eq!(serde_json::to_string(&bytes_2).unwrap(), expected_2);
+        assert_eq!(bytes_3, expected_3);
+        assert_eq!(bytes_4, expected_4);
+        assert_eq!(bytes_5, expected_5);
+    }
+
+    #[test]
+    fn test_types_block_parameter() {
+        let block_param_default = BlockParameter::default();
+        let block_param_custom = BlockParameter::Custom(U64::from(11827902));
+
+        assert_eq!(
+            serde_json::to_string(&block_param_default).unwrap(),
+            "\"latest\""
+        );
+        assert_eq!(
+            serde_json::to_string(&block_param_custom).unwrap(),
+            "\"0xb47abe\""
+        );
+    }
+
+    #[test]
+    fn test_types_private_key() {
+        let raw_hex_key = "0xe4745d1287b67412ce806746e83d49efe5cec53f5a27aa666fb9e8092a8dbd43";
+        let private_key_prefixed = PrivateKey::ZeroXPrefixed(H256::from_str(raw_hex_key).unwrap());
+        let private_key_non_prefixed =
+            PrivateKey::NonPrefixed(H256::from_str(raw_hex_key).unwrap());
+
+        assert_eq!(
+            serde_json::to_string(&private_key_prefixed).unwrap(),
+            "\"0xe4745d1287b67412ce806746e83d49efe5cec53f5a27aa666fb9e8092a8dbd43\""
+        );
+        assert_eq!(
+            serde_json::to_string(&private_key_non_prefixed).unwrap(),
+            "\"e4745d1287b67412ce806746e83d49efe5cec53f5a27aa666fb9e8092a8dbd43\""
+        );
+    }
+}
