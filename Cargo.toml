@@ -3,6 +3,13 @@ name = "ethane"
 version = "0.1.0"
 authors = ["thojest <thojest@gmail.com>"]
 edition = "2018"
+description = "An alternative web3 implementation with the aim of being slim and simple"
+repository = "https://github.com/thojest/ethane"
+license = "MIT"
+keywords = ["web3", "ethereum", "jsonrpc", "rpc", "simple"]
+categories = ["cryptography::cryptocurrencies", "web-programming"]
+readme = "README.md"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
