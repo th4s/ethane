@@ -25,24 +25,21 @@ impl Http {
         })
     }
 
-    fn prepare_request(&self, method: &str, path: Option<&str>) -> UreqRequest {
-        let mut domain = self.address.clone();
-        if let Some(path) = path {
-            domain.push_str(path);
-        }
-
-        let mut request = self.agent.request(method, &domain);
+    fn prepare_json_request(&self) -> UreqRequest {
+        let domain = self.address.clone();
+        let mut request = self.agent.request("POST", &domain);
         if let Some(ref credentials) = self.credentials {
             request = request.set("Authorization", &credentials.to_auth_string());
         }
+        request = request.set("Content-Type", "application/json");
+        request = request.set("Accept", "application/json");
         request
     }
 }
 
 impl Request for Http {
     fn request(&mut self, cmd: String) -> Result<String, TransportError> {
-        let mut request = self.prepare_request("POST", None);
-        request = request.set("Content-Type", "application/json");
+        let request = self.prepare_json_request();
         trace!("Sending request {:?} with body {}", &request, &cmd);
         let response = request.send_string(&cmd).map_err(HttpError::from)?;
         response
@@ -65,4 +62,21 @@ pub enum HttpError {
     Conversion(#[from] std::io::Error),
     #[error("HttpError: {0}")]
     UreqError(#[from] UreqError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_http_prepare_request() {
+        let address = String::from("http://127.0.0.1");
+        let credentials = Credentials::Basic(String::from("check!"));
+        let client = Http::new(address, Some(credentials)).unwrap();
+        let request = client.prepare_json_request();
+
+        assert_eq!(request.header("Authorization").unwrap(), "Basic check!");
+        assert_eq!(request.header("Content-Type").unwrap(), "application/json");
+        assert_eq!(request.header("Accept").unwrap(), "application/json");
+    }
 }

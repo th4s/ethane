@@ -54,3 +54,21 @@ pub enum TransportError {
     #[error("{0}")]
     UdsError(#[from] uds::UdsError),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_credentials() {
+        let auth_string = "my_awesome_auth_string";
+        assert_eq!(
+            Credentials::Bearer(auth_string.to_string()).to_auth_string(),
+            String::from("Bearer ") + auth_string
+        );
+        assert_eq!(
+            Credentials::Basic(auth_string.to_string()).to_auth_string(),
+            String::from("Basic ") + auth_string
+        );
+    }
+}
