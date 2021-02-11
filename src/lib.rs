@@ -11,7 +11,7 @@
 //! **This library is very raw and under heavy development.
 //! Expect to find some bugs and use at your own risk!**
 //!
-//! In order to get started, just create a [connector](crate::Connector) over some transport.
+//! In order to get started, create a [connector](crate::Connector) over some transport.
 //! The following examples show you how to make a request and how to subscribe to events.
 //!
 //! # Examples
@@ -62,11 +62,12 @@
 //! let tx = tx_subscription.next_item().unwrap();
 //! ```
 
+pub use connector::subscription::{Subscription, SubscriptionError};
 pub use connector::{Connector, ConnectorError};
-pub use transport::{Credentials, Http, WebSocket};
+pub use transport::{http::Http, websocket::WebSocket, Credentials};
 
 #[cfg(target_family = "unix")]
-pub use transport::Uds;
+pub use transport::uds::Uds;
 
 pub mod connector;
 pub mod rpc;

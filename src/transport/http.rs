@@ -1,3 +1,5 @@
+//! Implementation of http transport
+
 use super::Credentials;
 use crate::transport::{Request, TransportError};
 use log::{debug, trace};

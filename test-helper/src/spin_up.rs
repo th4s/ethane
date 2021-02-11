@@ -1,9 +1,8 @@
-use ethane::connector::{Subscription, SubscriptionError};
 use ethane::rpc::{sub::SubscriptionRequest, Rpc};
 #[cfg(target_family = "unix")]
-use ethane::transport::Uds;
-use ethane::transport::{Http, Request, Subscribe, WebSocket};
-use ethane::{Connector, ConnectorError};
+use ethane::transport::uds::Uds;
+use ethane::transport::{Request, Subscribe};
+use ethane::{Connector, ConnectorError, Http, Subscription, SubscriptionError, WebSocket};
 #[cfg(target_family = "unix")]
 use rand::distributions::Alphanumeric;
 #[cfg(target_family = "unix")]

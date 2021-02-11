@@ -1,3 +1,5 @@
+//! Implementation of websocket transport
+
 use super::{Credentials, Request, Subscribe, TransportError};
 use http::{Request as HttpRequest, Uri};
 use log::{debug, error, trace};

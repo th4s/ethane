@@ -2,11 +2,12 @@
 
 use crate::rpc::{sub::SubscriptionRequest, Rpc};
 use crate::transport::{
-    Credentials, Http, HttpError, Request, Subscribe, TransportError, WebSocket, WebSocketError,
+    http::Http, http::HttpError, websocket::WebSocket, websocket::WebSocketError, Credentials,
+    Request, Subscribe, TransportError,
 };
 
 #[cfg(target_family = "unix")]
-use crate::transport::{Uds, UdsError};
+use crate::transport::uds::{Uds, UdsError};
 
 use log::{debug, error, info, trace};
 use serde::de::DeserializeOwned;
@@ -16,8 +17,8 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use thiserror::Error;
 
-mod subscription;
-pub use subscription::{Subscription, SubscriptionError};
+pub mod subscription;
+use subscription::Subscription;
 
 /// Used to to interact with ethereum nodes
 ///

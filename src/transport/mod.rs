@@ -1,15 +1,10 @@
 //! Possible transports which are supported by the [Connector](crate::Connector)
 
 use thiserror::Error;
-
-pub use self::http::{Http, HttpError};
+pub mod http;
 #[cfg(target_family = "unix")]
-pub use uds::{Uds, UdsError};
-pub use websocket::{WebSocket, WebSocketError};
-mod http;
-#[cfg(target_family = "unix")]
-mod uds;
-mod websocket;
+pub mod uds;
+pub mod websocket;
 
 /// Implemented by transports which offer request functionality
 pub trait Request {
@@ -29,7 +24,7 @@ pub trait Subscribe {
 /// Use this when creating a [connector](crate::Connector). Supports Basic and Bearer authentication.
 /// So you can easily add HTTP Basic or JWT authentication. This will add an authorization header
 /// to your requests and works for [websockets](crate::Connector::websocket) and
-/// [http requests](crate::Connector::http).
+/// [http](crate::Connector::http).
 #[derive(Debug, Clone)]
 pub enum Credentials {
     Bearer(String),

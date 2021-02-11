@@ -1,3 +1,5 @@
+//! Implementation of Unix domain socket transport (Unix only)
+
 use crate::transport::{Request, Subscribe, TransportError};
 use log::{debug, error, trace};
 use std::io::{BufRead, BufReader, Write};
@@ -6,7 +8,7 @@ use std::os::unix::net::UnixStream;
 use std::str;
 use thiserror::Error;
 
-/// An interprocess connection using a unix domain socket
+/// An interprocess connection using a unix domain socket (Unix only)
 pub struct Uds {
     pub path: String,
     read_stream: BufReader<UnixStream>,
@@ -78,11 +80,6 @@ impl Drop for Uds {
         if let Err(err) = close {
             error!("{}", err);
         }
-
-        let delete = std::fs::remove_file(&self.path);
-        if let Err(err) = delete {
-            error!("{}", err);
-        }
     }
 }
 
@@ -133,6 +130,8 @@ mod tests {
         let message = "{\"test\": true}";
         let mut uds = Uds::new(TEST_IPC.to_string()).unwrap();
         let _write = uds.write(String::from(message)).unwrap();
+
+        let _delete_socket = std::fs::remove_file(TEST_IPC).unwrap();
         assert_eq!(uds.read_json().unwrap(), message);
     }
 }

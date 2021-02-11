@@ -10,7 +10,7 @@
 //! There are some deviations between what is really supported and the official specification.
 //! This is why some functions are marked as deprecated. They will probably be removed.
 //!
-//! Use these functions supplied here to generate [Rpc](Rpc) objects and pass them to the
+//! Use these functions to generate [Rpc](Rpc) objects and pass them to the
 //! [call](crate::Connector::call) function of a [connector](crate::Connector).
 
 use log::error;
