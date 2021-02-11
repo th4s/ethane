@@ -89,9 +89,9 @@ impl<T: Subscribe + Request> Connector<T> {
 }
 
 impl<T: Request> Connector<T> {
-    /// Sends a request to an ethereum node. Use a function in one of these namespaces
+    /// Sends a request to an ethereum node. Use a function in one of these
     /// [functions](crate::rpc) to generate the request. Does **not** support the
-    /// subscription(crate::rpc::sub) namespace.
+    /// [subscription](crate::rpc::sub) namespace.
     pub fn call<U: DeserializeOwned + Debug>(
         &mut self,
         mut rpc: Rpc<U>,
