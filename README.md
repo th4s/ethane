@@ -9,6 +9,9 @@ http and websockets it also supports Http Basic and Bearer Authentication.
 Expect to find some bugs and use at your own risk!**
 
 Please also have a look at the [documentation](https://docs.rs/ethane).
+If you just want to use this crate, it is also available on crates.io
+([Ethane](https://crates.io/crates/ethane)). If you find any bugs please
+do not hesitate to open an issue.
 
 ## How to use this library
 

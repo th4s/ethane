@@ -15,16 +15,13 @@ pub struct Http {
 }
 
 impl Http {
-    pub(crate) fn new(
-        address: String,
-        credentials: Option<Credentials>,
-    ) -> Result<Self, HttpError> {
+    pub(crate) fn new(address: String, credentials: Option<Credentials>) -> Self {
         debug!("Creating http client to {}", address);
-        Ok(Http {
+        Http {
             agent: Agent::new(),
             address,
             credentials,
-        })
+        }
     }
 
     fn prepare_json_request(&self) -> UreqRequest {
@@ -74,7 +71,7 @@ mod tests {
     fn test_http_prepare_request() {
         let address = String::from("http://127.0.0.1");
         let credentials = Credentials::Basic(String::from("check!"));
-        let client = Http::new(address, Some(credentials)).unwrap();
+        let client = Http::new(address, Some(credentials));
         let request = client.prepare_json_request();
 
         assert_eq!(request.header("Authorization").unwrap(), "Basic check!");

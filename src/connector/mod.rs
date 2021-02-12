@@ -2,8 +2,8 @@
 
 use crate::rpc::{sub::SubscriptionRequest, Rpc};
 use crate::transport::{
-    http::Http, http::HttpError, websocket::WebSocket, websocket::WebSocketError, Credentials,
-    Request, Subscribe, TransportError,
+    http::Http, websocket::WebSocket, websocket::WebSocketError, Credentials, Request, Subscribe,
+    TransportError,
 };
 
 #[cfg(target_family = "unix")]
@@ -30,11 +30,11 @@ pub struct Connector<T> {
 
 impl Connector<Http> {
     /// Create a connector with a http connection. Does **not** allow to subscribe to node events.
+    // This cannot return an error, but it does for convenience reasons. Should we change it?
     pub fn http(domain: &str, credentials: Option<Credentials>) -> Result<Self, ConnectorError> {
         info!("Creating connector over http");
         Ok(Connector {
-            connection: Http::new(String::from(domain), credentials)
-                .map_err(ConnectorError::from)?,
+            connection: Http::new(String::from(domain), credentials),
             id_pool: (0..1000).collect(),
         })
     }
@@ -156,12 +156,11 @@ enum RpcResult<T> {
 }
 
 /// An error type collecting what can go wrong using a connector
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error)]
 pub enum ConnectorError {
     #[error("Connector Websocket Init Error: {0}")]
     WsInit(#[from] WebSocketError),
-    #[error("Connector Http Init Error: {0}")]
-    HttpInit(#[from] HttpError),
     #[cfg(target_family = "unix")]
     #[error("Connector Unix Domain Socket Init Error: {0}")]
     UdsInit(#[from] UdsError),
