@@ -23,7 +23,7 @@ pub enum ConnectorWrapper {
 impl ConnectorWrapper {
     pub fn new_from_env() -> ConnectorWrapper {
         match std::env::var("CONNECTION")
-            .unwrap_or_else(|_| String::from("ws"))
+            .unwrap_or_else(|_| String::from("http"))
             .as_str()
         {
             "http" => Self::Http(ConnectorNodeBundle::http()),

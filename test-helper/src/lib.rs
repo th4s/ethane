@@ -104,6 +104,7 @@ pub fn deploy_contract(
     let abi = abi(raw_contract);
     let contract_bytes = Bytes::from_str(&bin).unwrap();
     let address = address;
+    ethane::contract::query(serde_json::to_vec(&abi).unwrap().as_slice());
     let transaction = TransactionRequest {
         from: address,
         data: Some(contract_bytes),
@@ -124,6 +125,7 @@ pub fn bin(contract_input: Value) -> String {
 }
 
 pub fn abi(contract_input: Value) -> Value {
+    println!("{}", contract_input);
     contract_input["abi"].clone()
 }
 
