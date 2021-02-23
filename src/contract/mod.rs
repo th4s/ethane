@@ -1,3 +1,9 @@
+use anyhow::anyhow;
+
+use crate::rpc;
+use crate::types::{
+    BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, U256, U64, H160,
+};
 
 // /// Ethereum Contract Interface
 // #[derive(Debug, Clone)]
@@ -18,14 +24,23 @@
 //
 // }
 
-pub fn query(json: &[u8]) {
-    let abi = ethabi::Contract::load(json).unwrap();
-    abi.function("").unwrap().encode_input(&params.into_tokens()).unwrap();
+pub fn query(address: H160, json: &[u8]) {
+    let encoded = encode_input(json, "solution", &[], false).unwrap();
+    println!("Lofasz: {}", encoded);
+    let call = Call {
+        to: address,
+        data: Some(Bytes::from_slice(encoded.as_bytes())),
+        ..Default::default()
+    };
+
+    rpc::eth_call(call, None);
+    //let abi = ethabi::Contract::load(json).unwrap();
+    //abi.function("").unwrap().encode_input(&params.into_tokens()).unwrap();
 }
 
-fn load_function(abi_json: &[u8], name_or_signature: &str) -> anyhow::Result<ethane::Function> {
+fn load_function(abi_json: &[u8], name_or_signature: &str) -> anyhow::Result<ethabi::Function> {
     //let file = File::open(path)?;
-    let contract = ethane::Contract::load(abi_json)?;
+    let contract = ethabi::Contract::load(abi_json)?;
     let params_start = name_or_signature.find('(');
 
     match params_start {
@@ -57,7 +72,7 @@ fn load_function(abi_json: &[u8], name_or_signature: &str) -> anyhow::Result<eth
 }
 
 fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], lenient: bool) -> anyhow::Result<String> {
-    let function = load_function(abi_json, name_or_signature)?;
+    let function = load_function(abi_json, name_or_signature).unwrap();
 
     let params: Vec<_> =
         function.inputs.iter().map(|param| param.kind.clone()).zip(values.iter().map(|v| v as &str)).collect();
@@ -66,5 +81,20 @@ fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], len
     let result = function.encode_input(&tokens)?;
 
     Ok(hex::encode(&result))
+}
+
+use ethabi::{
+    token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer},
+};
+
+fn parse_tokens(params: &[(ethabi::ParamType, &str)], lenient: bool) -> anyhow::Result<Vec<Token>> {
+    params
+        .iter()
+        .map(|&(ref param, value)| match lenient {
+            true => LenientTokenizer::tokenize(param, value),
+            false => StrictTokenizer::tokenize(param, value),
+        })
+        .collect::<Result<_, _>>()
+        .map_err(From::from)
 }
 
