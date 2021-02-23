@@ -404,6 +404,12 @@ pub struct SignedTransaction {
     pub tx: Transaction,
 }
 
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ContractCall {
+    pub address: H160,
+    pub abi: serde_json::Value,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

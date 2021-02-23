@@ -1,5 +1,5 @@
 use ethane::rpc::{self, Rpc};
-use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256};
+use ethane::types::{Bytes, PrivateKey, TransactionRequest, H160, H256, U256, ContractCall};
 
 use rand::Rng;
 use serde::de::DeserializeOwned;
@@ -104,7 +104,10 @@ pub fn deploy_contract(
     let abi = abi(raw_contract);
     let contract_bytes = Bytes::from_str(&bin).unwrap();
     let address = address;
-    ethane::contract::query(serde_json::to_vec(&abi).unwrap().as_slice());
+    ethane::contract::query(ContractCall{
+        abi: abi.clone(),
+        address: address,
+    });
     let transaction = TransactionRequest {
         from: address,
         data: Some(contract_bytes),
