@@ -406,7 +406,8 @@ pub struct SignedTransaction {
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ContractCall {
-    pub address: H160,
+    pub from: H160,
+    pub to: H160,
     pub abi: serde_json::Value,
 }
 

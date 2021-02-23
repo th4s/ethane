@@ -104,10 +104,6 @@ pub fn deploy_contract(
     let abi = abi(raw_contract);
     let contract_bytes = Bytes::from_str(&bin).unwrap();
     let address = address;
-    ethane::contract::query(ContractCall{
-        abi: abi.clone(),
-        address: address,
-    });
     let transaction = TransactionRequest {
         from: address,
         data: Some(contract_bytes),

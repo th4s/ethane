@@ -1,22 +1,27 @@
-use crate::types::ContractCall;
+use crate::types::{ContractCall, Call, Bytes, U256, TransactionRequest};
 
 use anyhow::anyhow;
 
-//use crate::rpc;
+use crate::rpc;
 //use crate::types::{
   //  BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, U256, U64, H160,
 //};
 
-pub fn query(call: ContractCall) {
+pub fn query(call: ContractCall) -> Rpc<H256> {
     let encoded = encode_input(serde_json::to_vec(&call.abi).unwrap().as_slice(), "solution", &[], false).unwrap();
     println!("Lofasz: {}", encoded);
-//     let call = Call {
-//         to: address,
-//         data: Some(Bytes::from_slice(encoded.as_bytes())),
-//         ..Default::default()
-//     };
-//
-//     rpc::eth_call(call, None);
+
+    let tr = TransactionRequest{
+        from: call.from,
+        to: Some(call.to),
+        data: Some(Bytes::from_slice(encoded.as_bytes())),
+        gas: Some(U256::from(250000)),
+        ..Default::default()
+    };
+    let result = rpc::eth_send_transaction(tr);
+    //let result = rpc::eth_call(call, None);
+    println!("Lofasz response: {:?}", result.params);
+    result
 //     //let abi = ethabi::Contract::load(json).unwrap();
 //     //abi.function("").unwrap().encode_input(&params.into_tokens()).unwrap();
 }
@@ -69,6 +74,8 @@ fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], len
 use ethabi::{
     token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer},
 };
+use crate::rpc::Rpc;
+use ethereum_types::H256;
 
 fn parse_tokens(params: &[(ethabi::ParamType, &str)], lenient: bool) -> anyhow::Result<Vec<Token>> {
     params
