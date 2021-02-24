@@ -532,12 +532,23 @@ fn test_contract_call() {
     let abi = abi(raw_contract);
     let from = create_account(&mut client).1;
 
-    let result = client.call(ethane::contract::query(ethane::types::ContractCall{
+    let tx_hash = client.call(ethane::contract::query(ethane::types::ContractCall{
         from,
         abi: abi.clone(),
         to: contract_address,
     })).unwrap();
-    println!("{:?}", result);
+    println!("{:?}", tx_hash);
+    ethane::contract::fetch_query_result(ethane::types::ContractCall{
+        from,
+        abi: abi.clone(),
+        to: contract_address,
+    }, tx_hash);
+    // wait_for_transaction(&mut client, tx_hash);
+    // rpc_call_test_some(
+    //     &mut client,
+    //     rpc::eth_get_transaction_by_block_number_and_index(None, U64::zero()),
+    // );
+
 }
 
 // DEVIATION FROM SPEC

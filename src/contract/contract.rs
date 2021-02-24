@@ -7,23 +7,30 @@ use crate::rpc;
   //  BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, U256, U64, H160,
 //};
 
-pub fn query(call: ContractCall) -> Rpc<H256> {
+pub fn query(call: ContractCall) -> Rpc<Bytes> {
     let encoded = encode_input(serde_json::to_vec(&call.abi).unwrap().as_slice(), "solution", &[], false).unwrap();
-    println!("Lofasz: {}", encoded);
+    println!("Lofasz: {:?}", encoded);
+    // let out = keccak(b"solution()");
+    // println!("Lofasz: {:?}", out);
 
-    let tr = TransactionRequest{
-        from: call.from,
-        to: Some(call.to),
-        data: Some(Bytes::from_slice(encoded.as_bytes())),
-        gas: Some(U256::from(250000)),
+    let tr = Call{
+        //from: Some(call.from),
+        to: call.to,
+        data: Some(encoded),
+        //data: Some(Bytes::from_slice(encoded.as_bytes())),
+        //gas: Some(U256::from(250000)),
         ..Default::default()
     };
-    let result = rpc::eth_send_transaction(tr);
+    let result = rpc::eth_call(tr, None);
     //let result = rpc::eth_call(call, None);
     println!("Lofasz response: {:?}", result.params);
     result
 //     //let abi = ethabi::Contract::load(json).unwrap();
 //     //abi.function("").unwrap().encode_input(&params.into_tokens()).unwrap();
+}
+
+pub fn fetch_query_result(call: ContractCall, b: Bytes) {
+    decode_call_output(serde_json::to_vec(&call.abi).unwrap().as_slice(), "solution", b);
 }
 
 fn load_function(abi_json: &[u8], name_or_signature: &str) -> anyhow::Result<ethabi::Function> {
@@ -59,7 +66,7 @@ fn load_function(abi_json: &[u8], name_or_signature: &str) -> anyhow::Result<eth
     }
 }
 
-fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], lenient: bool) -> anyhow::Result<String> {
+fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], lenient: bool) -> anyhow::Result<Bytes> {
     let function = load_function(abi_json, name_or_signature).unwrap();
 
     let params: Vec<_> =
@@ -67,8 +74,9 @@ fn encode_input(abi_json: &[u8], name_or_signature: &str, values: &[String], len
 
     let tokens = parse_tokens(&params, lenient)?;
     let result = function.encode_input(&tokens)?;
-
-    Ok(hex::encode(&result))
+    println!("Function: {:?}", result);
+    //img.iter().flat_map(|rgb| rgb.data.iter()).cloned().collect();
+    Ok(Bytes::from_slice(result.as_slice()))
 }
 
 use ethabi::{
@@ -86,4 +94,23 @@ fn parse_tokens(params: &[(ethabi::ParamType, &str)], lenient: bool) -> anyhow::
         })
         .collect::<Result<_, _>>()
         .map_err(From::from)
+}
+
+fn decode_call_output(abi_json: &[u8], name_or_signature: &str, data: Bytes) -> anyhow::Result<String> {
+    let function = load_function(abi_json, name_or_signature)?;
+    //let data: Vec<u8> = hex::decode(&data)?;
+    let tokens = function.decode_output(data.0.as_slice())?;
+    let types = function.outputs;
+
+    assert_eq!(types.len(), tokens.len());
+
+    let result = types
+        .iter()
+        .zip(tokens.iter())
+        .map(|(ty, to)| format!("{} {}", ty.kind, to))
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    println!("Solution: {}", result);
+    Ok(result)
 }
