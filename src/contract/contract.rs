@@ -1,17 +1,12 @@
-use crate::types::{ContractCall, Call, Bytes, U256, TransactionRequest};
+use crate::types::{ContractCall, Call, Bytes, U256};
 
 use anyhow::anyhow;
 
 use crate::rpc;
-//use crate::types::{
-  //  BlockParameter, Bytes, Call, Filter, GasCall, TransactionRequest, ValueOrVec, H256, U256, U64, H160,
-//};
 
 pub fn query(call: ContractCall) -> Rpc<Bytes> {
     let encoded = encode_input(serde_json::to_vec(&call.abi).unwrap().as_slice(), "solution", &[], false).unwrap();
-    println!("Lofasz: {:?}", encoded);
-    // let out = keccak(b"solution()");
-    // println!("Lofasz: {:?}", out);
+    println!("Request: {:?}", encoded);
 
     let tr = Call{
         //from: Some(call.from),
@@ -23,7 +18,7 @@ pub fn query(call: ContractCall) -> Rpc<Bytes> {
     };
     let result = rpc::eth_call(tr, None);
     //let result = rpc::eth_call(call, None);
-    println!("Lofasz response: {:?}", result.params);
+    println!("Request wrapped: {:?}", result.params);
     result
 //     //let abi = ethabi::Contract::load(json).unwrap();
 //     //abi.function("").unwrap().encode_input(&params.into_tokens()).unwrap();
