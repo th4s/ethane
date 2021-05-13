@@ -1,12 +1,13 @@
 # Ethane 
 
+**THIS PROJECT IS CONTINUED AT [zgendao/ethane](https://github.com/zgendao/ethane).**
+
 Ethane is an alternative web3 implementation with the aim of being slim and simple.
 It does not depend on futures or any executors. It currently supports http and
 websockets (both plain and TLS) and inter process communication via Unix domain sockets (Unix only). For
 http and websockets it also supports Http Basic and Bearer Authentication.
 
-**This library is very raw and under heavy development.
-Expect to find some bugs and use at your own risk!**
+**This library is very raw. Expect to find some bugs and use at your own risk!**
 
 Please also have a look at the [documentation](https://docs.rs/ethane).
 If you just want to use this crate, it is also available on crates.io
